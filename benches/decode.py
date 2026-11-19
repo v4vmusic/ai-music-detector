@@ -6,8 +6,14 @@ import sys
 from collections.abc import Sequence
 from pathlib import Path
 
-from benches._shared.audio import decode_window
-from benches._shared.errors import AidetectError
+# Standalone scripts (CC §10) get the script directory on sys.path, not the workspace
+# root; add the root so `benches` imports resolve when invoked as `python benches/decode.py`.
+_WORKSPACE_ROOT = Path(__file__).resolve().parent.parent
+if str(_WORKSPACE_ROOT) not in sys.path:
+    sys.path.insert(0, str(_WORKSPACE_ROOT))
+
+from benches._shared.audio import decode_window  # noqa: E402
+from benches._shared.errors import AidetectError  # noqa: E402
 
 __all__ = ["main"]
 

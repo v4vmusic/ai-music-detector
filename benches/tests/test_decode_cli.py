@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
 from collections.abc import Callable
 from pathlib import Path
 
@@ -37,3 +39,28 @@ def test_decode_cli_reports_decode_errors(
     assert code == 1
     assert captured.out == ""
     assert captured.err
+
+
+def test_decode_script_runs_standalone_from_workspace_root(
+    tmp_path: Path,
+    write_wav: WriteWav,
+) -> None:
+    audio = write_wav(tmp_path / "ten.wav", 10.0)
+    root = Path(__file__).resolve().parents[2]
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(root / "benches" / "decode.py"),
+            "--path",
+            str(audio),
+            "--window",
+            "3",
+        ],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        check=False,
+        shell=False,
+    )
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout)["shape"] == [48_000]
