@@ -3,7 +3,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import os
 import sys
 from collections.abc import Mapping, Sequence
 from dataclasses import asdict
@@ -11,10 +10,6 @@ from importlib.metadata import version
 from pathlib import Path
 from types import MappingProxyType
 from typing import Any, Final, Protocol, cast
-from urllib.request import urlopen
-
-import numpy as np
-from numpy.typing import NDArray
 
 # Standalone scripts (CC §10) get the script directory on sys.path, not the workspace
 # root; add the root so `benches` imports resolve when invoked as `python benches/run_bench.py`.
@@ -22,16 +17,16 @@ _WORKSPACE_ROOT = Path(__file__).resolve().parent.parent
 if str(_WORKSPACE_ROOT) not in sys.path:
     sys.path.insert(0, str(_WORKSPACE_ROOT))
 
+from aidetect.backends import loaders  # noqa: E402
 from benches._shared.audio import decode_window  # noqa: E402
 from benches._shared.constants import (  # noqa: E402
     FILL_MODES,
     PLACEMENT_FIXED,
     PLACEMENTS,
-    SAMPLE_RATE,
     FillMode,
     Placement,
 )
-from benches._shared.errors import AidetectError, ModelLoadError  # noqa: E402
+from benches._shared.errors import AidetectError  # noqa: E402
 from benches._shared.experiment import (  # noqa: E402
     BASELINE_RESULTS_DIR,
     DEFAULT_EXPERIMENTS_DIR,
@@ -181,179 +176,29 @@ def run(
 
 
 def _cache_dir() -> Path:
-    configured = os.environ.get("AIDETECT_CACHE_DIR")
-    return Path(configured) if configured else Path.home() / ".cache" / "huggingface" / "hub"
+    """Bench-facing alias for the promoted cache directory helper."""
 
-
-def _weights_path(spec: ModelSpec) -> Path:
-    repo_cache = f"models--{spec.model_id.replace('/', '--')}"
-    return _cache_dir() / repo_cache / "snapshots" / spec.revision / spec.weights_file
+    return loaders.cache_dir()
 
 
 def _load_weights(spec: ModelSpec) -> bytes:
-    """Fetch the pinned weights once into AIDETECT_CACHE_DIR and verify their digest."""
+    """Bench-facing alias for the promoted pinned-weight loader."""
 
-    path = _weights_path(spec)
-    if path.exists():
-        data = path.read_bytes()
-    else:
-        url = f"https://huggingface.co/{spec.model_id}/resolve/{spec.revision}/{spec.weights_file}"
-        with urlopen(url, timeout=30) as response:  # noqa: S310 - pinned HTTPS URL
-            data = response.read(MAX_WEIGHTS_BYTES + 1)
-        if len(data) > MAX_WEIGHTS_BYTES:
-            raise ModelLoadError(
-                f"Weights for {spec.model_id} exceed the {MAX_WEIGHTS_BYTES} byte cap"
-            )
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(data)
-
-    digest = hashlib.sha256(data).hexdigest()
-    if digest != spec.weights_sha256:
-        raise ModelLoadError(
-            f"Weights digest mismatch for {spec.model_id}: expected {spec.weights_sha256}, "
-            f"got {digest}"
-        )
-    return data
-
-
-class _HFClassifier:
-    """Wraps a sonics classifier; torch/sonics imports stay inside the loader below."""
-
-    def __init__(self, model: Any, device: str, torch_module: Any) -> None:
-        # Any: torch/sonics are imported lazily and have no bench-side stubs (CC §3).
-        self._model = model
-        self._device = device
-        self._torch = torch_module
-
-    def __call__(self, samples: NDArray[np.float32]) -> float:
-        scale = max(float(np.std(samples)), 1e-6)
-        scaled = (samples / np.float32(scale)).astype(np.float32, copy=False)
-        tensor = self._torch.from_numpy(np.ascontiguousarray(scaled)).unsqueeze(0).to(self._device)
-        with self._torch.inference_mode():
-            logits = self._model(tensor)
-        return float(logits.reshape(-1)[0].item())
-
-    def unload(self) -> None:
-        del self._model
-        if self._device.startswith("cuda") and self._torch.cuda.is_available():
-            self._torch.cuda.empty_cache()
+    return loaders.load_fakeprint_weights(spec, cache_dir=_cache_dir(), device="cpu")
 
 
 def _load_spctttra_classifier(
     spec: SpecTTTraSpec, *, cache_dir: Path | None, device: str
 ) -> Classifier:
-    """Download pinned weights once into the HF cache and build a torch classifier."""
+    """Bench-facing alias so tests can patch the loader by its historical name."""
 
-    try:
-        import torch
-        from huggingface_hub import hf_hub_download
-        from sonics import HFAudioClassifier  # type: ignore[import-untyped]  # no py.typed upstream
-    except ImportError as exc:
-        raise ModelLoadError(
-            "SpecTTTra needs sonics, torch and huggingface_hub; install them with `uv sync`"
-        ) from exc
-
-    def download(filename: str) -> Path:
-        if cache_dir is None:
-            downloaded = hf_hub_download(
-                repo_id=spec.model_id, filename=filename, revision=spec.revision
-            )
-        else:
-            downloaded = hf_hub_download(
-                repo_id=spec.model_id,
-                filename=filename,
-                revision=spec.revision,
-                cache_dir=str(cache_dir),
-            )
-        return Path(downloaded)
-
-    try:
-        config_path = download("config.json")
-        weights_path = download("pytorch_model.bin")
-    except Exception as exc:
-        raise ModelLoadError(f"Cannot download {spec.model_id}@{spec.revision}: {exc}") from exc
-
-    # sonics' from_pretrained takes a local directory and does not accept a revision;
-    # both files came from the same pinned snapshot, so use that snapshot directory.
-    if config_path.parent != weights_path.parent:
-        raise ModelLoadError(f"Pinned snapshot for {spec.model_id}@{spec.revision} is inconsistent")
-    try:
-        model = HFAudioClassifier.from_pretrained(str(config_path.parent), map_location="cpu")
-        model.to(device)
-        model.eval()
-    except Exception as exc:
-        raise ModelLoadError(f"Cannot load {spec.model_id}@{spec.revision}: {exc}") from exc
-    return _HFClassifier(model=model, device=device, torch_module=torch)
-
-
-class _HFPipeline:
-    """Adapts the HF audio-classification pipeline to the backend's id-keyed surface."""
-
-    def __init__(self, classifier: Any, id2label: Mapping[int, str]) -> None:
-        # Any: transformers ships no stubs/py.typed, so there is no bench-side type (CC §3).
-        self._classifier = classifier
-        self._id2label = id2label
-
-    def __call__(self, samples: NDArray[np.float32], *, sampling_rate: int) -> Mapping[int, float]:
-        predictions = self._classifier(samples, sampling_rate=sampling_rate, top_k=None)
-        by_label: dict[str, float] = {}
-        for item in predictions:
-            label, score = item["label"], item["score"]
-            if not isinstance(label, str) or not isinstance(score, (int, float)):
-                raise ModelLoadError("HF AST pipeline returned an invalid prediction")
-            by_label[label] = float(score)
-        return {
-            index: by_label[label] for index, label in self._id2label.items() if label in by_label
-        }
-
-    def id2label(self) -> Mapping[int, str]:
-        return self._id2label
-
-    def unload(self) -> None:
-        del self._classifier
+    return loaders.load_spctttra_classifier(spec, cache_dir=cache_dir, device=device)
 
 
 def _load_ast_pipeline(spec: AstSpec, *, cache_dir: Path | None, device: str) -> Pipeline:
-    """Pin the HF AST snapshot and supply its training feature extractor; imports stay lazy."""
+    """Bench-facing alias so tests can patch the loader by its historical name."""
 
-    try:
-        from transformers import (  # type: ignore[import-untyped]
-            ASTFeatureExtractor,
-            AutoConfig,
-            AutoModelForAudioClassification,
-        )
-        from transformers import pipeline as hf_pipeline
-    except ImportError as exc:
-        raise ModelLoadError("AST needs transformers; install it with `uv sync`") from exc
-
-    download_kwargs: dict[str, str] = {"revision": spec.revision}
-    if cache_dir is not None:
-        download_kwargs["cache_dir"] = str(cache_dir)
-    try:
-        config = AutoConfig.from_pretrained(spec.model_id, **download_kwargs)
-        feature_extractor = ASTFeatureExtractor(
-            num_mel_bins=spec.feature_num_mel_bins,
-            sampling_rate=SAMPLE_RATE,
-            max_length=spec.feature_max_length,
-            mean=spec.feature_mean,
-            std=spec.feature_std,
-        )
-        model = AutoModelForAudioClassification.from_pretrained(spec.model_id, **download_kwargs)
-        classifier = hf_pipeline(
-            "audio-classification",
-            model=model,
-            config=config,
-            feature_extractor=feature_extractor,
-            device=0 if device.startswith("cuda") else -1,
-        )
-    except Exception as exc:
-        raise ModelLoadError(f"Cannot load {spec.model_id}@{spec.revision}: {exc}") from exc
-
-    labels = getattr(config, "id2label", None)
-    if not isinstance(labels, Mapping) or not labels:
-        raise ModelLoadError(f"No id2label in {spec.model_id}@{spec.revision}")
-    id2label = {int(index): str(label) for index, label in labels.items()}
-    return _HFPipeline(classifier=classifier, id2label=id2label)
+    return loaders.load_ast_pipeline(spec, cache_dir=cache_dir, device=device)
 
 
 def _write_json(path: Path, payload: Any) -> None:

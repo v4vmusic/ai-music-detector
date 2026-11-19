@@ -5,19 +5,28 @@ requires-python = "==3.10.*"
 [[package]]
 name = "ai-music-detector"
 version = "0.0.0"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
-    { name = "huggingface-hub" },
     { name = "numpy" },
-    { name = "onnxruntime" },
+]
+
+[package.optional-dependencies]
+ast = [
+    { name = "transformers" },
+]
+gpu = [
+    { name = "huggingface-hub" },
     { name = "sonics" },
     { name = "torch" },
     { name = "torchaudio" },
-    { name = "transformers" },
+]
+onnx = [
+    { name = "onnxruntime" },
 ]
 
 [package.dev-dependencies]
 dev = [
+    { name = "ai-music-detector", extra = ["ast", "gpu", "onnx"] },
     { name = "mypy" },
     { name = "pytest" },
     { name = "pytest-cov" },
@@ -26,17 +35,19 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "huggingface-hub", specifier = ">=0.28,<1" },
+    { name = "huggingface-hub", marker = "extra == 'gpu'", specifier = ">=0.28,<1" },
     { name = "numpy", specifier = ">=1.26,<2" },
-    { name = "onnxruntime", specifier = ">=1.23,<1.24" },
-    { name = "sonics", git = "https://github.com/awsaf49/sonics.git?rev=9156ffad151f797c71556923c4a02fa01fa8fc91" },
-    { name = "torch", specifier = "==2.6.0" },
-    { name = "torchaudio", specifier = "==2.6.0" },
-    { name = "transformers", specifier = "==4.48.3" },
+    { name = "onnxruntime", marker = "extra == 'onnx'", specifier = ">=1.23,<1.24" },
+    { name = "sonics", marker = "extra == 'gpu'", git = "https://github.com/awsaf49/sonics.git?rev=9156ffad151f797c71556923c4a02fa01fa8fc91" },
+    { name = "torch", marker = "extra == 'gpu'", specifier = "==2.6.0" },
+    { name = "torchaudio", marker = "extra == 'gpu'", specifier = "==2.6.0" },
+    { name = "transformers", marker = "extra == 'ast'", specifier = "==4.48.3" },
 ]
+provides-extras = ["onnx", "gpu", "ast"]
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "ai-music-detector", extras = ["onnx", "gpu", "ast"] },
     { name = "mypy", specifier = ">=1.11,<2" },
     { name = "pytest", specifier = ">=8.3,<9" },
     { name = "pytest-cov", specifier = ">=5,<7" },

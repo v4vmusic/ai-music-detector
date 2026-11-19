@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "seed": 42,
+  "split_strategy": "fixed_dev_test",
+  "target_ai_recall": 0.85,
+  "default_config": "FP-1b",
+  "second_opinion_config": "STA-1b",
+  "cascade_policy": {
+    "stage_one_can_label_ai_generated": true,
+    "stage_two_can_label_ai_generated": false,
+    "stage_two_flag_label": "uncertain",
+    "stage_two_no_flag_label": "human",
+    "union_auto_ai_generated": false
+  },
+  "configs": {
+    "FP-1b": {
+      "backend": "fakeprint",
+      "model_key": "fakeprint",
+      "model_id": "lofcz/ai-music-detector",
+      "window_seconds": 10.0,
+      "placement": "middle",
+      "fill_mode": "zero-pad",
+      "flag_threshold": 4.139542579650879e-05,
+      "source": "benches/results/tuning/fakeprint-placement-summary.md",
+      "raw_scores": "benches/results/tuning/FP-1b/raw/fakeprint.jsonl"
+    },
+    "STA-1b": {
+      "backend": "spectttra",
+      "model_key": "spectttra-alpha-120s",
+      "model_id": "awsaf49/sonics-spectttra-alpha-120s",
+      "window_seconds": 120.0,
+      "placement": "middle",
+      "fill_mode": "zero-pad",
+      "flag_threshold": -1.8243114948272705,
+      "source": "benches/results/tuning/report.md",
+      "raw_scores": "benches/results/tuning/STA-1b/raw/spectttra-alpha-120s.jsonl"
+    },
+    "AST-1c": {
+      "backend": "ast",
+      "model_key": "ast-60s",
+      "model_id": "AI-Music-Detection/ai_music_detection_large_60s",
+      "window_seconds": 60.0,
+      "placement": "end",
+      "fill_mode": "zero-pad",
+      "flag_threshold": 0.9737352132797241,
+      "source": "benches/results/tuning/report.md",
+      "raw_scores": "benches/results/tuning/AST-1c/raw/ast-60s.jsonl"
+    },
+    "STB-1b": {
+      "backend": "spectttra",
+      "model_key": "spectttra-beta-120s",
+      "model_id": "awsaf49/sonics-spectttra-beta-120s",
+      "window_seconds": 120.0,
+      "placement": "middle",
+      "fill_mode": "zero-pad",
+      "flag_threshold": -4.2131547927856445,
+      "source": "benches/results/tuning/report.md",
+      "raw_scores": "benches/results/tuning/STB-1b/raw/spectttra-beta-120s.jsonl"
+    },
+    "STG-1a": {
+      "backend": "spectttra",
+      "model_key": "spectttra-gamma-120s",
+      "model_id": "awsaf49/sonics-spectttra-gamma-120s",
+      "window_seconds": 120.0,
+      "placement": "start",
+      "fill_mode": "zero-pad",
+      "flag_threshold": -2.2436182498931885,
+      "source": "benches/results/tuning/report.md",
+      "raw_scores": "benches/results/tuning/STG-1a/raw/spectttra-gamma-120s.jsonl"
+    }
+  },
+  "caveats": [
+    "Thresholds are dev-derived at 0.85 AI recall on a small, genre-skewed 400-track set with unknown generators.",
+    "They are conditional on the documented placement, window, fill mode and peak-normalized preprocessing.",
+    "Fakeprint calibration is weak (ECE about 0.286); prefer shadow/review use and revalidate on representative data.",
+    "Stage-two flags route to uncertain rather than ai_generated; union auto-AI labeling was rejected by tuning evidence."
+  ]
+}

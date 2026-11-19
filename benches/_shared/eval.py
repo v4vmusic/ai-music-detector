@@ -11,6 +11,8 @@ from typing import Any
 import numpy as np
 from numpy.typing import NDArray
 
+from aidetect.calibration import Calibration, calibration_fallback, temperature_scale_scores
+from aidetect.constants import FALLBACK_HIGH_THRESHOLD, FALLBACK_LOW_THRESHOLD
 from benches._shared.constants import AI_GENERATED_LABEL, HUMAN_LABEL, Label
 
 __all__ = [
@@ -34,8 +36,6 @@ __all__ = [
 SMALL_CLASS_THRESHOLD = 50
 DEFAULT_K_FOLDS = 5
 FIXED_DEV_FRACTION = 0.8
-FALLBACK_LOW_THRESHOLD = 0.35
-FALLBACK_HIGH_THRESHOLD = 0.65
 PROB_EPS = 1e-7
 
 
@@ -57,14 +57,6 @@ class EvalSplit:
     strategy: str
     folds: list[EvalFold]
     k_folds: int | None = None
-
-
-@dataclass(frozen=True, slots=True)
-class Calibration:
-    temperature: float
-    low_threshold: float
-    high_threshold: float
-    warnings: tuple[str, ...] = ()
 
 
 def _stratified_k_fold(samples: Sequence[EvalSample], *, seed: int, k: int) -> list[EvalFold]:
@@ -297,14 +289,6 @@ def _sigmoid(values: NDArray[np.float64]) -> NDArray[np.float64]:
     return out
 
 
-def temperature_scale_scores(raw_scores: Sequence[float], temperature: float) -> list[float]:
-    if temperature <= 0.0:
-        raise ValueError("temperature must be positive")
-    logits = _raw_scores_to_logits(raw_scores)
-    probs = _sigmoid(logits / temperature)
-    return [float(p) for p in probs]
-
-
 def log_loss(labels: Sequence[int], probabilities: Sequence[float]) -> float:
     y, p = _as_arrays(labels, probabilities)
     if len(y) == 0:
@@ -322,15 +306,6 @@ def _is_degenerate(labels: Sequence[int], scores: Sequence[float]) -> bool:
     if not np.all(np.isfinite(s)):
         return True
     return bool(np.allclose(s, s[0]))
-
-
-def calibration_fallback(*, reason: str) -> Calibration:
-    return Calibration(
-        temperature=1.0,
-        low_threshold=FALLBACK_LOW_THRESHOLD,
-        high_threshold=FALLBACK_HIGH_THRESHOLD,
-        warnings=(f"calibration_fallback: {reason}",),
-    )
 
 
 def _fit_temperature(labels: Sequence[int], logits: NDArray[np.float64]) -> float:

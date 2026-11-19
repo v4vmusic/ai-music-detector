@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "ai-music-detector"
 version = "0.0.0"
@@ -6,18 +10,20 @@ requires-python = ">=3.10,<3.11"
 dependencies = [
   # numpy: float32 audio windows and all shared DSP/window math (CC §7).
   "numpy>=1.26,<2",
-  # onnxruntime: runs the approved fakeprint ONNX model on CPU in Phase 1 (CC §7).
-  "onnxruntime>=1.23,<1.24",
-  # torch/torchaudio: sonics SpecTTTra inference; pinned to the verified 2.6.0 build (CC §7).
+]
+
+[project.optional-dependencies]
+# onnxruntime: runs the default fakeprint ONNX model on CPU; optional so plain imports stay light.
+onnx = ["onnxruntime>=1.23,<1.24"]
+# torch/torchaudio/sonics/huggingface_hub: pinned GPU inference stack for SpecTTTra backends.
+gpu = [
   "torch==2.6.0",
   "torchaudio==2.6.0",
-  # huggingface_hub: fetches pinned SpecTTTra snapshots; sonics imports it but omits it from setup.py.
   "huggingface_hub>=0.28,<1",
-  # sonics: HFAudioClassifier for the Phase 2 SpecTTTra backends (approved in the plan).
   "sonics @ git+https://github.com/awsaf49/sonics.git@9156ffad151f797c71556923c4a02fa01fa8fc91",
-  # transformers: ASTForAudioClassification pipeline for the Phase 3 AST backend (owner-approved).
-  "transformers==4.48.3",
 ]
+# transformers: AST audio-classification pipeline; optional until an AST model is selected.
+ast = ["transformers==4.48.3"]
 
 [dependency-groups]
 dev = [
@@ -25,11 +31,16 @@ dev = [
   "pytest-cov>=5,<7",
   "ruff>=0.6,<1",
   "mypy>=1.11,<2",
+  # The bench harness and offline library tests need every optional backend installed.
+  "ai-music-detector[onnx,gpu,ast]",
 ]
 
-[tool.uv]
-# Phase 0 is a bench skeleton; the library package is added in Phase 6.
-package = false
+[tool.setuptools.packages.find]
+where = ["ai-music-detector/src"]
+include = ["aidetect*"]
+
+[tool.setuptools.package-data]
+aidetect = ["resources/*.json"]
 
 [tool.ruff]
 line-length = 100
@@ -45,13 +56,19 @@ known-first-party = ["benches", "aidetect"]
 python_version = "3.10"
 strict = true
 warn_unreachable = true
-files = ["benches"]
+files = ["benches", "ai-music-detector/src"]
 
 [tool.pytest.ini_options]
-testpaths = ["benches/tests", "scripts/tests"]
+testpaths = ["benches/tests", "scripts/tests", "ai-music-detector/tests"]
 addopts = "-m 'not integration and not slow and not gpu'"
 markers = [
   "integration: requires external model weights, network or other unavailable services",
   "slow: long-running test, excluded from the default run",
   "gpu: requires a CUDA GPU, excluded from the default run",
 ]
+
+[tool.coverage.run]
+source = ["aidetect"]
+
+[tool.coverage.report]
+show_missing = true

@@ -54,7 +54,7 @@ Benchmark all *available* models; "all four" is qualified by these constraints.
 - [x] **Phase 3 — AST backend** — Hugging Face AST, 60s
 - [x] **Phase 4 — MusicDET feasibility** — research spike, gate D2
 - [x] **Phase 5 — Benchmark harness and report** — k-fold, metrics, calibration, gate D1
-- [ ] **Phase 6 — Library foundation** — create `ai-music-detector/`, promote shared code
+- [x] **Phase 6 — Library foundation** — create `ai-music-detector/`, promote shared code
 - [ ] **Phase 7 — Library adapters and CLI** — URL/bytes inputs, CLI, docs
 
 ## 5. Decision gates
@@ -290,7 +290,7 @@ Generate fixtures in test code with the standard `wave` module; commit no binary
 
 ### Phase 6 — Library foundation
 
-**Status:** [ ] not started  **Depends on:** gate D1
+**Status:** [x] complete  **Depends on:** gate D1
 
 **Goal:** create `ai-music-detector/` with a clean, pip-installable library containing all backends that were validated in the benches, with the D1 primary default (`fakeprint`, middle 10 s window) and the recommended conservative two-stage tri-state methodology.
 
@@ -304,11 +304,11 @@ Generate fixtures in test code with the standard `wave` module; commit no binary
 **Out of scope:** URL safety, CLI, HTTP wrapper, worker/DB/RSS/UI work, and any backend that failed or was not benchmarked.
 
 **Test-first checklist:**
-- [ ] Public API with a fake backend returns probability in `[0, 1]`, label (`human`/`uncertain`/`ai_generated`), model id/revision, window/placement info, warnings, timings.
-- [ ] Threshold boundaries use the exported (or fallback) values as defined in section 1: `human` when `p < low`, `ai_generated` when `p > high`, otherwise `uncertain`; `p == low` and `p == high` are `uncertain`.
-- [ ] Inference loads packaged calibration/threshold configuration for the active backend/config (including the D1 primary and recommended second-opinion configs derived from tuning evidence) and applies the same transform/labeling; no dev data is needed at scoring time. Missing or degenerate calibration/threshold config uses the fixed fallback with a warning.
-- [ ] Default primary backend/config equals D1 (`fakeprint`, middle 10 s window) and records placement in result metadata; `spectttra-alpha-120s` (middle 120 s, `STA-1b` config) is available as the recommended second-opinion backend/config, and the library supports applying the conservative tri-state and recommended two-stage cascade policy (or provides the scored outputs/labels needed to apply it) without auto-labeling `ai_generated` on a union rule. Other bench-validated backends remain selectable by `model_id` where supported, and an unsupported id/config raises the shared error with an actionable message.
-- [ ] `import aidetect` does not import torch or any model library (lazy imports).
+- [x] Public API with a fake backend returns probability in `[0, 1]`, label (`human`/`uncertain`/`ai_generated`), model id/revision, window/placement info, warnings, timings.
+- [x] Threshold boundaries use the exported (or fallback) values as defined in section 1: `human` when `p < low`, `ai_generated` when `p > high`, otherwise `uncertain`; `p == low` and `p == high` are `uncertain`.
+- [x] Inference loads packaged calibration/threshold configuration for the active backend/config (including the D1 primary and recommended second-opinion configs derived from tuning evidence) and applies the same transform/labeling; no dev data is needed at scoring time. Missing or degenerate calibration/threshold config uses the fixed fallback with a warning.
+- [x] Default primary backend/config equals D1 (`fakeprint`, middle 10 s window) and records placement in result metadata; `spectttra-alpha-120s` (middle 120 s, `STA-1b` config) is available as the recommended second-opinion backend/config, and the library supports applying the conservative tri-state and recommended two-stage cascade policy (or provides the scored outputs/labels needed to apply it) without auto-labeling `ai_generated` on a union rule. Other bench-validated backends remain selectable by `model_id` where supported, and an unsupported id/config raises the shared error with an actionable message.
+- [x] `import aidetect` does not import torch or any model library (lazy imports).
 
 **Implementation notes:** `__all__` in every package `__init__.py`; fully annotated signatures; no mutable module globals; no `print()` in library code. Promote shared placement/window handling and calibration/threshold application from bench/tuning code where it meets the rule of three; do not reimplement bench helpers in the library. Keep score/probability semantics consistent with bench results (including fakeprint/raw-score handling and calibration caveats noted in tuning evidence) and keep cascade policy explicit and configurable rather than implicit.
 
@@ -316,9 +316,9 @@ Generate fixtures in test code with the standard `wave` module; commit no binary
 
 **Human testing:** `uv pip install -e .` in a fresh environment; import `aidetect`, score a local file with the default primary backend, and (if supported by the API) exercise the recommended second-opinion/cascade path with fakes or available backends; confirm no torch import on plain import.
 
-**Done criteria:** [ ] checklist tests red then green; [ ] CC §2 checks including 80% coverage pass; [ ] no bench-only helper reimplemented.
+**Done criteria:** [x] checklist tests red then green; [x] CC §2 checks including 80% coverage pass; [x] no bench-only helper reimplemented.
 
-**For later phases:** *(agent fills this in.)*
+**For later phases:** Phase 7 should add `score_url` and the CLI without changing the D1 cascade semantics: no union auto-`ai_generated` rule, and stage-two flags remain `uncertain`. Keep model-library imports lazy in the CLI/adapters, reuse the promoted `decode_window_bytes` and cached loaders, and revalidate the packaged cutoffs when adding URL-sourced audio or new generators.
 
 ---
 
