@@ -50,7 +50,7 @@ Benchmark all *available* models; "all four" is qualified by these constraints.
 
 - [x] **Phase 0 — Bench foundations** — no models or downloads; manifest, audio adapter, shared types
 - [x] **Phase 1 — Fakeprint backend** — ONNX, CPU, cheapest model first
-- [ ] **Phase 2 — SpecTTTra backends** — alpha/beta/gamma 120s
+- [x] **Phase 2 — SpecTTTra backends** — alpha/beta/gamma 120s
 - [ ] **Phase 3 — AST backend** — Hugging Face AST, 60s
 - [ ] **Phase 4 — MusicDET feasibility** — research spike, gate D2
 - [ ] **Phase 5 — Benchmark harness and report** — k-fold, metrics, calibration, gate D1
@@ -147,7 +147,7 @@ Generate fixtures in test code with the standard `wave` module; commit no binary
 
 ### Phase 2 — SpecTTTra backends
 
-**Status:** [ ] not started  **Depends on:** Phase 0, Phase 1 runner pattern
+**Status:** [x] done  **Depends on:** Phase 0, Phase 1 runner pattern
 
 **Goal:** three SpecTTTra backends behind the shared interface, each scoring a 120 s window. Install `sonics` from GitHub (approved here). Weights 75 / 86 / 98 MB; authors report 3.9 / 2.3 / 1.6 GB VRAM. Load one variant at a time.
 
@@ -156,11 +156,11 @@ Generate fixtures in test code with the standard `wave` module; commit no binary
 **Out of scope:** 5 s variants, training, fine-tuning, SONICS dataset, the library.
 
 **Test-first checklist:**
-- [ ] Registry keys map to valid model ids and window lengths; unknown key raises `ModelLoadError`.
-- [ ] Offset and duration reach the decoder unchanged, including the 25 s default.
-- [ ] Fake classifier with known logit gives expected probability, variant id and revision.
-- [ ] Metadata records sample rate 16000, window length 120 and preprocessing version.
-- [ ] Load/unload leaves no module-level model handle (fake loader tracks calls).
+- [x] Registry keys map to valid model ids and window lengths; unknown key raises `ModelLoadError`.
+- [x] Offset and duration reach the decoder unchanged, including the 25 s default.
+- [x] Fake classifier with known logit gives expected probability, variant id and revision.
+- [x] Metadata records sample rate 16000, window length 120 and preprocessing version.
+- [x] Load/unload leaves no module-level model handle (fake loader tracks calls).
 
 **Implementation notes:** keep `HFAudioClassifier.from_pretrained` in one place. Keep this backend's probability conversion local for now; it becomes shared in Phase 3 when the third backend needs it (CC §5.2). GPU tests are marked `@pytest.mark.gpu` and excluded from default runs.
 
@@ -168,9 +168,17 @@ Generate fixtures in test code with the standard `wave` module; commit no binary
 
 **Human testing:** score one 120 s file per variant; confirm plausible probabilities and no OOM; confirm `nvidia-smi` memory returns to baseline between variants; seeded rerun matches within an absolute tolerance of 1e-4 (record any larger GPU drift).
 
-**Done criteria:** [ ] checklist tests red then green; [ ] CC §2 checks pass; [ ] download size and VRAM reported; [ ] no weights committed; one variant loaded at a time.
+**Done criteria:** [x] checklist tests red then green; [x] CC §2 checks pass; [x] download size and VRAM reported; [x] no weights committed; one variant loaded at a time.
 
-**For later phases:** *(agent fills this in.)*
+**For later phases:**
+- **Phase 3:** `sigmoid()` in `benches/backends/spctttra.py` is the local probability conversion to promote into `benches/_shared/` (rule of three); update the fakeprint and SpecTTTra backends to import it.
+- **Phase 5:** `calibrated_probability` here is a plain sigmoid of `raw_score`, not temperature-scaled; fit temperature from `raw_score` so it is not applied twice.
+- **Phase 5/6:** SpecTTTra output `window` encodes the actual offset (`120s@16000Hz@25s`); `DEFAULT_OFFSETS`, `SPECTTRA_VERSION_NAMES` and `run(..., offset_seconds=...)` in `benches/run_bench.py` are the runner wiring to reuse/extend.
+- **Phase 5:** the authors' eval crops from 3/4 of each track and std-normalizes waveform; our shared decoder uses the mandated 25 s offset, and std normalization lives only in `run_bench._HFClassifier.__call__` (real model, not fakes). Report results as conditional on this preprocessing.
+- **Phase 5/6:** `sonics.from_pretrained` takes a directory and no revision, so `run_bench._load_spctttra_classifier()` pins two `hf_hub_download` calls to the registry revision; HF weights have no SHA pin (unlike fakeprint). Revisions and sizes are in `SPECTTRA_SPECS`; weight I/O stays in the runner so backends remain I/O-free (Phase 1 decision).
+- **Phase 5:** two-track smoke only (seed 42): alpha human 0.128 / AI 0.912, beta 0.010 / 0.812, gamma 0.729 / 0.936 — gamma false-positives on that human track; directional, no tuning. Seeded reruns (all three, plus a post-refactor rerun) had 0.0 drift; VRAM returned to 63 MiB after each variant.
+- **Phase 6:** `torch==2.6.0`, `torchaudio==2.6.0`, `huggingface_hub` and pinned `sonics` are now root dependencies for GPU backends; lazy imports in `run_bench._load_spctttra_classifier()` keep `import benches.backends.spctttra` torch-free.
+
 
 ---
 

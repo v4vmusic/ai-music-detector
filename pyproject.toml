@@ -8,6 +8,13 @@ dependencies = [
   "numpy>=1.26,<2",
   # onnxruntime: runs the approved fakeprint ONNX model on CPU in Phase 1 (CC §7).
   "onnxruntime>=1.23,<1.24",
+  # torch/torchaudio: sonics SpecTTTra inference; pinned to the verified 2.6.0 build (CC §7).
+  "torch==2.6.0",
+  "torchaudio==2.6.0",
+  # huggingface_hub: fetches pinned SpecTTTra snapshots; sonics imports it but omits it from setup.py.
+  "huggingface_hub>=0.28,<1",
+  # sonics: HFAudioClassifier for the Phase 2 SpecTTTra backends (approved in the plan).
+  "sonics @ git+https://github.com/awsaf49/sonics.git@9156ffad151f797c71556923c4a02fa01fa8fc91",
 ]
 
 [dependency-groups]

@@ -12,8 +12,10 @@ From the workspace root (Python 3.10, `uv`, `ffmpeg` required):
 uv sync
 ```
 
-This creates the root `.venv` and installs the pinned runtime dependencies (NumPy, onnxruntime)
-and dev tools from `uv.lock`.
+This creates the root `.venv` and installs the pinned runtime dependencies (NumPy, onnxruntime,
+`torch`/`torchaudio` 2.6.0, `sonics` and its dependencies) and dev tools from `uv.lock`.
+`sonics` is pinned to commit `9156ffad151f797c71556923c4a02fa01fa8fc91` on GitHub. A CUDA GPU
+is only needed for the SpecTTTra GPU backends; CPU fakeprint runs need no GPU.
 
 ## Manifest format
 
@@ -59,8 +61,8 @@ uv run python benches/run_bench.py \
 ```
 
 Use `--manifest test-audio/test-songs.csv` for bench runs. Its extra metadata columns are
-ignored and URL rows are skipped with a warning. The backend scores a 10 s window from the
-start of each track.
+ignored and URL rows are skipped with a warning. Fakeprint scores a 10 s window from the start
+of each track; SpecTTTra scores a 120 s window at 25 s by default.
 
 Each local manifest row produces one JSONL line. Scored rows contain the shared `ModelOutput`
 fields plus `path`, `label`, `seed`, `config_hash` and package `versions`; `timings.score_seconds`
@@ -72,6 +74,40 @@ Fakeprint weights are pinned by revision and SHA-256 in `benches/_shared/registr
 downloaded once into `AIDETECT_CACHE_DIR` (default: the Hugging Face cache) and never committed.
 Rerun with the same `--seed` and manifest to reproduce scores exactly; the `config_hash` records
 the model metadata, seed and package versions.
+
+## SpecTTTra backends (GPU)
+
+The three 120 s variants are separate backends. **Run one variant per process** so GPU memory is
+released between models; each invocation exits after writing its JSONL. With `--device cuda`
+(default) a GPU is required; `--device cpu` works but is much slower.
+
+```bash
+uv run python benches/run_bench.py \
+  --backend spectttra-alpha-120s \
+  --manifest /tmp/smoke.csv \
+  --out benches/results/raw/spectttra-alpha-120s.jsonl \
+  --seed 42 --offset 25 --device cuda
+```
+
+Use `spectttra-beta-120s` or `spectttra-gamma-120s` for the other variants.
+`--offset` is optional: the per-backend default is 25 s, pinned in
+`benches/_shared/registry.py` (`SPECTTRA_SPECS`). Window duration comes from the registry
+(120 s), and short tracks follow the shared zero-pad / 5 s reject policy. Each row records the
+actual offset in `window` (e.g. `120s@16000Hz@25s`) and the model revision.
+
+Pinned weights (downloaded on first use into `AIDETECT_CACHE_DIR`, never committed):
+
+| Backend | HF revision | Weights |
+| --- | --- | --- |
+| `spectttra-alpha-120s` | `094b32a5545098a71c113f6ae9d5c55310564268` | 75 MB |
+| `spectttra-beta-120s` | `cc49422a98b5b92700876c608d0f9cdf27214a3e` | 86 MB |
+| `spectttra-gamma-120s` | `57659d8cb04767893537bbeb89da973e2e5a0290` | 98 MB |
+
+Authors report 3.9 / 2.3 / 1.6 GB VRAM for training these variants; inference on one 120 s
+window uses substantially less. Check `nvidia-smi` between runs — memory should return to
+baseline. Re-running with the same seed and manifest should match within an absolute tolerance
+of 1e-4; record any larger GPU drift. The unit tests use an injected classifier and need no
+weights, GPU or network.
 
 ## Staging the AI audio (download script)
 
