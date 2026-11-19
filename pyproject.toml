@@ -37,7 +37,7 @@ warn_unreachable = true
 files = ["benches"]
 
 [tool.pytest.ini_options]
-testpaths = ["benches/tests"]
+testpaths = ["benches/tests", "scripts/tests"]
 addopts = "-m 'not integration and not slow and not gpu'"
 markers = [
   "integration: requires external model weights, network or other unavailable services",

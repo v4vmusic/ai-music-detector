@@ -51,6 +51,26 @@ Phase 0 has no scoring runner; Phase 1 adds the first one (`benches/run_bench.py
 interface. Every runner must use a fixed seed, write raw per-track JSONL, and record the model
 revision, package versions, config hash and wall/GPU timing.
 
+## Staging the AI audio (download script)
+
+`scripts/download_ai_songs.py` downloads the AI half of the staging set and appends verified
+rows to `test-audio/test-songs.csv`. The bench runner never fetches URLs itself. Set
+`V4VMUSIC_DATABASE_URL` (or pass `--database-url`), then preview or download:
+
+```bash
+uv run --with psycopg2-binary python scripts/download_ai_songs.py --dry-run
+uv run --with psycopg2-binary python scripts/download_ai_songs.py
+```
+
+`--with psycopg2-binary` provides a throwaway dependency without changing `pyproject.toml`.
+The script uses seeded selection (default seed 42), a 300-song candidate pool, serial requests
+with a 1 s delay, capped redirects/bytes/timeouts, `Retry-After`-aware retries, and ffprobe
+verification. Failed URLs are logged to `test-audio/ai-download-errors.csv`. Reruns skip songs
+already in the CSV. `--dry-run` performs no downloads. All paths are git-ignored.
+
+The staging list now holds 200 `human` and 200 `ai_generated` rows. `test-audio/manifest.csv`
+remains the manifest for bench runs and is still pending.
+
 ## Result locations
 
 - Raw per-track JSONL: `benches/results/raw/` (git-ignored).

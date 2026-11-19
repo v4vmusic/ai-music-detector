@@ -98,8 +98,9 @@ Generate fixtures in test code with the standard `wave` module; commit no binary
 **For later phases:**
 - **Phase 1:** `benches/decode.py` needs its `sys.path` bootstrap to survive the CC §10 standalone-file command; the first runner must reuse that pattern (or extract a shared helper at the rule-of-three point).
 - **Phase 1:** `load_manifest()` drops URL rows after a warning, so runner row counts and warnings cover local entries only.
-- **Phase 1:** `test-audio/manifest.csv` does not exist yet; `test-audio/test-songs.csv` is a human-only 200-row staging list, so the smoke run still needs AI rows and the real manifest (no audio is committed).
-- **Phase 5:** staging rows came from gPodder via guid/mp3Url cross-reference to v4vmusic (music only, AI-tagged excluded), seed 42, mix 40 LT / 40 PNK / 40 RCK / 3 CNT / 77 OTHER; AI rows will be seeded random from all 2,800 with genre-mix limitations documented.
+- **Phase 1:** `test-audio/manifest.csv` does not exist yet; `test-audio/test-songs.csv` is a complete 400-row staging list (200 `human` + 200 `ai_generated`), with audio in the git-ignored `test-audio/human-songs/` and `test-audio/ai-songs/`. The smoke run still needs the real manifest (no audio is committed).
+- **Phase 5:** staging provenance: human rows from gPodder via guid/mp3Url cross-reference to v4vmusic (music only, AI-tagged excluded), seed 42, mix 40 LT / 40 PNK / 40 RCK / 3 CNT / 77 OTHER; AI rows from `scripts/download_ai_songs.py`, seed 42, seeded random from all 2,800 tagged songs. 7 candidate downloads were skipped and logged in `test-audio/ai-download-errors.csv` (5 HTTP 403, one unsupported `.mpga` extension, one byte-cap overflow). All 400 files are present, decodable and ≥5 s.
+- **Phase 5:** the human set is deliberately genre-skewed while the AI sample is untargeted (only ~610/2,800 AI songs carry core genre tags). Report results as conditional on this mix, not as a general AI-detection rate.
 - **Phase 1/2:** `decode_window()` buffers the whole file before slicing; fine for 120 s windows, revisit if much longer inputs appear.
 - **Phase 2/3:** `benches/_shared/registry.py` holds only `MODEL_KEY_FAKEPRINT`; add variant keys and any id → revision/window mapping there, not in backends.
 - **Phase 5:** `dataclasses.asdict(ModelOutput)` already yields JSON-friendly rows including nested `Timings`; extend that shape rather than duplicating it.
@@ -221,9 +222,9 @@ Generate fixtures in test code with the standard `wave` module; commit no binary
 
 ### Phase 5 — Benchmark harness and report
 
-**Status:** [ ] not started  **Depends on:** Phases 1–3 and Phase 4 findings. The labeled CSV in `test-audio/` is needed for the real run only; build and test the harness with synthetic fixtures if it is absent.
+**Status:** [ ] not started  **Depends on:** Phases 1–3 and Phase 4 findings. The labeled staging CSV is complete (`test-audio/test-songs.csv`, 200 per class), but the bench manifest `test-audio/manifest.csv` is still pending; build and test the harness with synthetic fixtures until it exists.
 
-**Goal:** one reproducible comparison of all available backends on the owner's labeled set, with calibration and a recommendation. If the CSV is not present yet, build and test the harness with synthetic fixtures and leave the real run as a human step.
+**Goal:** one reproducible comparison of all available backends on the owner's labeled set, with calibration and a recommendation. If the bench manifest is not present yet, build and test the harness with synthetic fixtures and leave the real run as a human step.
 
 **In scope:** unified `benches/run_bench.py` (all backends, folds/seed flags); stratified k-fold when fewer than ~50 per class, otherwise a fixed dev/test split; metrics ROC-AUC (primary), PR-AUC, FPR at ~95% recall, F1 at chosen threshold, ECE after temperature scaling; timing and peak VRAM. Fit temperature scaling and thresholds on dev folds only, then write `benches/results/calibration.json` (temperature, low/high thresholds, model ids and revisions, config hash, dev metrics) for Phase 6; fall back to `0.35 / 0.65` when dev data is absent or calibration is degenerate. Save raw per-track JSONL plus `benches/results/summary.json`; write `benches/results/report.md` with limitations (small set, unknown generators, older model generations). Produce **gate D1** for the owner when real results exist.
 
