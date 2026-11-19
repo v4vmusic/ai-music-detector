@@ -98,7 +98,8 @@ Generate fixtures in test code with the standard `wave` module; commit no binary
 **For later phases:**
 - **Phase 1:** `benches/decode.py` needs its `sys.path` bootstrap to survive the CC §10 standalone-file command; the first runner must reuse that pattern (or extract a shared helper at the rule-of-three point).
 - **Phase 1:** `load_manifest()` drops URL rows after a warning, so runner row counts and warnings cover local entries only.
-- **Phase 1:** `test-audio/` is empty; the real-weights smoke run needs an owner-supplied or synthetic local manifest (no audio is committed).
+- **Phase 1:** `test-audio/manifest.csv` does not exist yet; `test-audio/test-songs.csv` is a human-only 200-row staging list, so the smoke run still needs AI rows and the real manifest (no audio is committed).
+- **Phase 5:** staging rows came from gPodder via guid/mp3Url cross-reference to v4vmusic (music only, AI-tagged excluded), seed 42, mix 40 LT / 40 PNK / 40 RCK / 3 CNT / 77 OTHER; AI rows will be seeded random from all 2,800 with genre-mix limitations documented.
 - **Phase 1/2:** `decode_window()` buffers the whole file before slicing; fine for 120 s windows, revisit if much longer inputs appear.
 - **Phase 2/3:** `benches/_shared/registry.py` holds only `MODEL_KEY_FAKEPRINT`; add variant keys and any id → revision/window mapping there, not in backends.
 - **Phase 5:** `dataclasses.asdict(ModelOutput)` already yields JSON-friendly rows including nested `Timings`; extend that shape rather than duplicating it.
