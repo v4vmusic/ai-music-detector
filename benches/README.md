@@ -1,8 +1,8 @@
 # Bench harness
 
-Model experiments live here. Phase 0 provides only the shared skeleton: manifest loading,
-audio window decoding, result types and a decode utility. There are no models, weights,
-downloads or GPU calls in this phase.
+Model experiments live here. Shared helpers cover manifest loading, audio window decoding
+and result types. The first scoring backend is fakeprint (CPU, ONNX, ~15 kB of weights);
+there are no GPU calls yet.
 
 ## Setup
 
@@ -12,11 +12,12 @@ From the workspace root (Python 3.10, `uv`, `ffmpeg` required):
 uv sync
 ```
 
-This creates the root `.venv` and installs the pinned dev tools from `uv.lock`.
+This creates the root `.venv` and installs the pinned runtime dependencies (NumPy, onnxruntime)
+and dev tools from `uv.lock`.
 
 ## Manifest format
 
-`test-audio/manifest.csv` (or any owner-named path) is `path,label` with a header:
+The owner-designated manifest is `test-audio/test-songs.csv`. It requires a `path,label` header:
 
 ```csv
 path,label
@@ -47,9 +48,30 @@ Bench scripts are standalone and invoked from the workspace root:
 uv run python benches/<name>.py --manifest <csv> --out <dir>
 ```
 
-Phase 0 has no scoring runner; Phase 1 adds the first one (`benches/run_bench.py`) using this
-interface. Every runner must use a fixed seed, write raw per-track JSONL, and record the model
-revision, package versions, config hash and wall/GPU timing.
+The first runner is `benches/run_bench.py`:
+
+```bash
+uv run python benches/run_bench.py \
+  --backend fakeprint \
+  --manifest test-audio/test-songs.csv \
+  --out benches/results/raw/fakeprint.jsonl \
+  --seed 42
+```
+
+Use `--manifest test-audio/test-songs.csv` for bench runs. Its extra metadata columns are
+ignored and URL rows are skipped with a warning. The backend scores a 10 s window from the
+start of each track.
+
+Each local manifest row produces one JSONL line. Scored rows contain the shared `ModelOutput`
+fields plus `path`, `label`, `seed`, `config_hash` and package `versions`; `timings.score_seconds`
+is wall time and `gpu_seconds` is `null` for this CPU backend. A failed decode produces a row
+with `warnings`, `error`, `seed`, `config_hash` and `versions` but no score fields, and the run
+continues.
+
+Fakeprint weights are pinned by revision and SHA-256 in `benches/_shared/registry.py`. They are
+downloaded once into `AIDETECT_CACHE_DIR` (default: the Hugging Face cache) and never committed.
+Rerun with the same `--seed` and manifest to reproduce scores exactly; the `config_hash` records
+the model metadata, seed and package versions.
 
 ## Staging the AI audio (download script)
 
@@ -68,8 +90,8 @@ with a 1 s delay, capped redirects/bytes/timeouts, `Retry-After`-aware retries, 
 verification. Failed URLs are logged to `test-audio/ai-download-errors.csv`. Reruns skip songs
 already in the CSV. `--dry-run` performs no downloads. All paths are git-ignored.
 
-The staging list now holds 200 `human` and 200 `ai_generated` rows. `test-audio/manifest.csv`
-remains the manifest for bench runs and is still pending.
+The manifest now holds 200 `human` and 200 `ai_generated` rows. It is the same
+`test-audio/test-songs.csv` file with extra metadata columns, which the loader ignores.
 
 ## Result locations
 

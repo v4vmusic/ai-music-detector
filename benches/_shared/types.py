@@ -9,7 +9,7 @@ from numpy.typing import NDArray
 from benches._shared.constants import SAMPLE_RATE
 from benches._shared.errors import AudioDecodeError
 
-__all__ = ["AudioWindow", "ModelMetadata", "ModelOutput", "Timings"]
+__all__ = ["AudioWindow", "ModelMetadata", "ModelOutput", "Timings", "validate_audio_window"]
 
 
 def _require_finite(value: float, name: str) -> None:
@@ -28,6 +28,26 @@ def _require_non_empty(value: str, name: str) -> None:
         raise ValueError(f"{name} must not be empty")
 
 
+def validate_audio_window(window: AudioWindow) -> None:
+    """Check the shared audio contract for a window before a backend scores it."""
+
+    if window.sample_rate != SAMPLE_RATE:
+        raise AudioDecodeError(f"Expected {SAMPLE_RATE} Hz audio, got {window.sample_rate} Hz")
+    if window.samples.ndim != 1:
+        raise AudioDecodeError(f"Expected mono audio, got shape {window.samples.shape}")
+    if window.samples.dtype != np.float32:
+        raise AudioDecodeError(f"Expected float32 samples, got {window.samples.dtype}")
+    if not bool(np.all(np.isfinite(window.samples))):
+        raise AudioDecodeError("Audio samples must be finite")
+    if bool(np.any(np.abs(window.samples) > 1.0)):
+        raise AudioDecodeError("Audio samples must be within [-1.0, 1.0]")
+    _require_non_negative(window.offset_seconds, "offset_seconds")
+    if window.window_seconds is not None:
+        _require_finite(window.window_seconds, "window_seconds")
+        if window.window_seconds <= 0.0:
+            raise ValueError("window_seconds must be positive")
+
+
 @dataclass(frozen=True, slots=True)
 class AudioWindow:
     """One 16 kHz mono float32 window ready for a model backend."""
@@ -39,21 +59,7 @@ class AudioWindow:
     warnings: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
-        if self.sample_rate != SAMPLE_RATE:
-            raise AudioDecodeError(f"Expected {SAMPLE_RATE} Hz audio, got {self.sample_rate} Hz")
-        if self.samples.ndim != 1:
-            raise AudioDecodeError(f"Expected mono audio, got shape {self.samples.shape}")
-        if self.samples.dtype != np.float32:
-            raise AudioDecodeError(f"Expected float32 samples, got {self.samples.dtype}")
-        if not bool(np.all(np.isfinite(self.samples))):
-            raise AudioDecodeError("Audio samples must be finite")
-        if bool(np.any(np.abs(self.samples) > 1.0)):
-            raise AudioDecodeError("Audio samples must be within [-1.0, 1.0]")
-        _require_non_negative(self.offset_seconds, "offset_seconds")
-        if self.window_seconds is not None:
-            _require_finite(self.window_seconds, "window_seconds")
-            if self.window_seconds <= 0.0:
-                raise ValueError("window_seconds must be positive")
+        validate_audio_window(self)
 
 
 @dataclass(frozen=True, slots=True)

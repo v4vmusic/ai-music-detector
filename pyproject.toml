@@ -6,6 +6,8 @@ requires-python = ">=3.10,<3.11"
 dependencies = [
   # numpy: float32 audio windows and all shared DSP/window math (CC §7).
   "numpy>=1.26,<2",
+  # onnxruntime: runs the approved fakeprint ONNX model on CPU in Phase 1 (CC §7).
+  "onnxruntime>=1.23,<1.24",
 ]
 
 [dependency-groups]

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-__all__ = ["AidetectError", "AudioDecodeError", "InvalidManifestError"]
+__all__ = ["AidetectError", "AudioDecodeError", "InvalidManifestError", "ModelLoadError"]
 
 
 class AidetectError(Exception):
@@ -13,3 +13,7 @@ class AudioDecodeError(AidetectError):
 
 class InvalidManifestError(AidetectError):
     """The labeled CSV manifest is missing, malformed or invalid."""
+
+
+class ModelLoadError(AidetectError):
+    """A model session or its weights do not satisfy the backend contract."""

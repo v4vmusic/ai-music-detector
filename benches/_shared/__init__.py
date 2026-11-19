@@ -10,13 +10,25 @@ from benches._shared.constants import (
     WARNING_SHORT_TRACK_PADDED,
     Label,
 )
-from benches._shared.errors import AidetectError, AudioDecodeError, InvalidManifestError
+from benches._shared.errors import (
+    AidetectError,
+    AudioDecodeError,
+    InvalidManifestError,
+    ModelLoadError,
+)
 from benches._shared.manifest import ManifestEntry, load_manifest
-from benches._shared.registry import MODEL_KEY_FAKEPRINT, MODEL_KEYS
-from benches._shared.types import AudioWindow, ModelMetadata, ModelOutput, Timings
+from benches._shared.registry import FAKEPRINT_SPEC, MODEL_KEY_FAKEPRINT, MODEL_KEYS, ModelSpec
+from benches._shared.types import (
+    AudioWindow,
+    ModelMetadata,
+    ModelOutput,
+    Timings,
+    validate_audio_window,
+)
 
 __all__ = [
     "AI_GENERATED_LABEL",
+    "FAKEPRINT_SPEC",
     "HUMAN_LABEL",
     "LABELS",
     "MIN_TRACK_SECONDS",
@@ -30,9 +42,12 @@ __all__ = [
     "InvalidManifestError",
     "Label",
     "ManifestEntry",
+    "ModelLoadError",
     "ModelMetadata",
     "ModelOutput",
+    "ModelSpec",
     "Timings",
     "decode_window",
     "load_manifest",
+    "validate_audio_window",
 ]
