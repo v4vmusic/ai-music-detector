@@ -1,8 +1,8 @@
 # Bench harness
 
 Model experiments live here. Shared helpers cover manifest loading, audio window decoding
-and result types. The first scoring backend is fakeprint (CPU, ONNX, ~15 kB of weights);
-there are no GPU calls yet.
+and result types. Backends include fakeprint (CPU, ONNX, ~15 kB of weights) and GPU-based
+SpecTTTra and AST; MusicDET has no backend (see the feasibility note below).
 
 ## Setup
 
@@ -133,6 +133,12 @@ bins, 16 kHz and mean/std `-4.2677393` / `4.5689974`; `run_bench._load_ast_pipel
 extractor from `AST_SPEC` so no base-model download is needed. The pinned config's `id2label` is
 `{0: human, 1: ai_generated}`; the backend resolves the AI class by label, not by class index.
 Unit tests inject a pipeline and need no weights, GPU or network.
+
+## MusicDET feasibility
+
+Phase 4 researched `Chaolei98/MusicDET`; see [musicdet-feasibility.md](musicdet-feasibility.md). No trained
+checkpoint is published and there is no MusicDET bench command or backend. Gate D2 was recorded on
+2026-11-19 as **defer**, so Phase 5 compares only the four available candidate model families.
 
 ## Staging the AI audio (download script)
 

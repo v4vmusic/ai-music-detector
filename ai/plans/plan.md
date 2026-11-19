@@ -52,7 +52,7 @@ Benchmark all *available* models; "all four" is qualified by these constraints.
 - [x] **Phase 1 — Fakeprint backend** — ONNX, CPU, cheapest model first
 - [x] **Phase 2 — SpecTTTra backends** — alpha/beta/gamma 120s
 - [x] **Phase 3 — AST backend** — Hugging Face AST, 60s
-- [ ] **Phase 4 — MusicDET feasibility** — research spike, gate D2
+- [x] **Phase 4 — MusicDET feasibility** — research spike, gate D2
 - [ ] **Phase 5 — Benchmark harness and report** — k-fold, metrics, calibration, gate D1
 - [ ] **Phase 6 — Library foundation** — create `ai-music-detector/`, promote shared code
 - [ ] **Phase 7 — Library adapters and CLI** — URL/bytes inputs, CLI, docs
@@ -60,6 +60,7 @@ Benchmark all *available* models; "all four" is qualified by these constraints.
 ## 5. Decision gates
 
 - **D2 (after Phase 4):** owner decides whether MusicDET is dropped, attempted via zero-shot training on our human tracks, or deferred. No agent decides alone.
+- **D2 (recorded 2026-11-19): defer MusicDET** — keep the D1 comparison to the four available candidate model families; revisit only if cross-generator testing becomes a goal. Evidence: `benches/musicdet-feasibility.md`.
 - **D1 (after Phase 5):** owner chooses the default backend from measured results. Phase 6 does not start until D1 is recorded here. D2 does not block Phase 5: the harness compares available backends whether or not MusicDET proceeds, and D1 considers only backends actually benchmarked.
 
 Record a gate decision as one dated line with the choice; the benchmark report holds the evidence. If the labeled CSV never arrives, record D1 as "pending — harness only" instead of choosing a model.
@@ -219,7 +220,7 @@ Generate fixtures in test code with the standard `wave` module; commit no binary
 
 ### Phase 4 — MusicDET feasibility
 
-**Status:** [ ] not started  **Depends on:** Phase 0
+**Status:** [x] done  **Depends on:** Phase 0
 
 **Goal:** decide whether MusicDET can be benchmarked without SONICS. Research spike only — no training, no dataset downloads.
 
@@ -235,9 +236,15 @@ Generate fixtures in test code with the standard `wave` module; commit no binary
 
 **Human testing:** read the report and answer the D2 questionnaire (drop / attempt zero-shot / defer).
 
-**Done criteria:** [ ] report contains verified facts, sources and a recommendation; [ ] no training or dataset download; [ ] owner asked for D2.
+**Done criteria:** [x] report contains verified facts, sources and a recommendation; [x] no training or dataset download; [x] owner asked for D2 (questionnaire in `benches/musicdet-feasibility.md`, answered 2026-11-19: defer).
 
-**For later phases:** *(agent fills this in.)*
+**For later phases:**
+- **Owner:** D2 recorded 2026-11-19 as *defer* (section 5); no MusicDET backend or training in Phase 5. Reopen only with a new owner decision; evidence in `benches/musicdet-feasibility.md`.
+- **If D2 is reopened for a spike:** no checkpoint exists, so benchmark results require training `spec-nf` first; do not present a locally trained model as comparable to the published-weight backends.
+- **If D2 is reopened for a spike:** reuse the upstream data path rather than reimplementing it — `dataset.py` (64,600-sample crop, RMS normalization), `preprocess_audio.py` (48 kHz→16 kHz soxr_hq chain) and `train.py::build_dataloaders` (`--only_real`, protocol-file formats). Our shared ffmpeg decoder does neither the resampling round-trip nor RMS normalization; reconcile explicitly.
+- **If D2 is reopened for a spike:** generate `fakemusiccaps`-style protocol files from our `path,label` manifest; dev/validation must include both classes or `train.py`'s EER step fails. Hold human training folds out of evaluation.
+- **Phase 5/6:** MusicDET scores are negative log-likelihood (lower = AI), not probabilities; any backend must feed them through the shared calibration, and no backend exists yet.
+- **Phase 5:** report the paper's MP3/AAC 64 kbps robustness collapse (Table 6 in the feasibility report) as a limitation if MusicDET is ever compared on our podcast-MP3 set.
 
 ---
 

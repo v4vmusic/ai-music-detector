@@ -1,6 +1,6 @@
 # AI Music Detector — Plan Implementer
 
-Implement `ai/plans/plan.md` — **Phase `1`**. *(The owner fills in the phase number. Do not write the plan yourself.)*
+Implement `ai/plans/plan.md` — **Phase `4`**. *(The owner fills in the phase number. Do not write the plan yourself.)*
 
 **DO NOT WORK ON ANY OTHER PHASES.** If something from a later phase seems needed, note it in your report instead of building it.
 
