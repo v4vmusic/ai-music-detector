@@ -50,7 +50,7 @@ This plan is a pre–Phase 6 tuning track. It implements the experiments and evi
 ## 4. Phase overview
 
 - [x] **Phase T0 — Tuning harness prerequisites** — per-track placement strategies, loop-fill mode, config/metadata & experiment output support, tests (TDD)
-- [ ] **Phase T1 — Placement sweep experiments** — run AST/STA/STB/STG start/middle/end sweeps (zero-pad), evaluate and select best placement per backend (dev, goal-aligned)
+- [x] **Phase T1 — Placement sweep experiments** — run AST/STA/STB/STG start/middle/end sweeps (zero-pad), evaluate and select best placement per backend (dev, goal-aligned)
 - [ ] **Phase T2 — Loop-fill follow-up experiments** — run `*-2a` loop-fill on best placement per backend, evaluate
 - [ ] **Phase T3 — Comparison, report, and D1 review** — consolidate results vs Phase 5 baseline, produce tuning report, owner gate for D1 reaffirm/change
 
@@ -111,7 +111,7 @@ No agent decides T-D1 alone.
 
 ### Phase T1 — Placement sweep experiments
 
-**Status:** [ ] not started  **Depends on:** Phase T0
+**Status:** [x] done  **Depends on:** Phase T0
 
 **Goal:** execute and evaluate single-window placement sweeps (`start/middle/end`, `zero-pad`) for all in-scope backends, then select the best placement per backend on dev using the predefined goal-aligned criterion.
 
@@ -126,8 +126,8 @@ No agent decides T-D1 alone.
 **Out of scope:** loop-fill follow-ups (`*-2a`, T2), multi-window aggregation, code changes unrelated to running/reporting these experiments (if tooling gaps are found, note them; minimal fixes must follow TDD), and D1 decision.
 
 **Test-first checklist:**
-- [ ] If any analysis/evaluation helper code is added or changed, its behavior is covered by tests first (e.g. goal-aligned operating-point/FPR-at-target-recall selection) using synthetic data; pure experiment execution and report writing require no new behavior tests.
-- [ ] For each completed config, raw JSONL has 400 rows with expected fields/config identifiers and no silent failures (failed decodes/rows, if any, are recorded and reported).
+- [x] If any analysis/evaluation helper code is added or changed, its behavior is covered by tests first (e.g. goal-aligned operating-point/FPR-at-target-recall selection) using synthetic data; pure experiment execution and report writing require no new behavior tests.
+- [x] For each completed config, raw JSONL has 400 rows with expected fields/config identifiers and no silent failures (failed decodes/rows, if any, are recorded and reported).
 
 **Implementation notes:** prefer reusing `benches/_shared/eval.py` and existing runner/eval flows; extend only if needed for goal-aligned selection/reporting and do so with TDD. Treat all results as directional. If a backend/config run fails or is unstable, record it plainly and continue with remaining configs.
 
@@ -136,12 +136,18 @@ No agent decides T-D1 alone.
 **Human testing:** verify GPU/device availability and cached weights as needed; spot-check a few per-track outputs/config identifiers for one config per backend; review the selection criterion and that held-out test was reported once per selected config.
 
 **Done criteria:**
-- [ ] all in-scope placement configs run or explicitly reported as failed with reasons
-- [ ] best placement per backend selected on dev using a predefined goal-aligned criterion; held-out test reported once per selected config
-- [ ] placement-sweep comparison artifact written with clear config naming and caveats
-- [ ] CC §2 checks pass if any code/tests changed; Phase 5 committed artifacts unchanged
+- [x] all in-scope placement configs run or explicitly reported as failed with reasons
+- [x] best placement per backend selected on dev using a predefined goal-aligned criterion; held-out test reported once per selected config
+- [x] placement-sweep comparison artifact written with clear config naming and caveats
+- [x] CC §2 checks pass if any code/tests changed; Phase 5 committed artifacts unchanged
 
-**For later phases:** *(agent fills this in: selected placement per backend, criterion used, key metrics, artifact paths, and any run issues.)*
+**For later phases:**
+- Criterion (fixed before runs, dev-only): lowest human FPR at AI recall 0.85 on raw dev scores; tie-break larger separation margin, then dev ROC-AUC, then config name. Helper: `benches/_shared/selection.py`; CLI: `benches/placement_sweep.py`.
+- Dev-selected placements: `ast-60s`=`end` (AST-1c), `spectttra-alpha-120s`=`middle` (STA-1b), `spectttra-beta-120s`=`middle` (STB-1b), `spectttra-gamma-120s`=`start` (STG-1a). T2 should use these with `*-2a` names.
+- Artifacts: `benches/results/tuning/placement-sweep-summary.{json,md}`; raw under `benches/results/tuning/<CFG>/raw/`. All 12 configs scored 400/400, 0 failures.
+- Held-out test for selected configs (ROC-AUC / FPR@95 recall): AST-1c 0.8756 / 0.55; STA-1b 0.8806 / 0.525; STB-1b 0.8356 / 0.50; STG-1a 0.7356 / 0.725. At each dev-derived 85%-recall point, held-out human FPs: 8/40, 9/40, 20/40, 22/40.
+- Placement helped dev FPR@0.85 vs Phase 5 fixed-25s for all backends (AST 0.425→0.213, STA 0.275→0.256, STB 0.494→0.450, STG 0.575→0.544). At the matched dev-derived threshold, held-out human FPs baseline→selected are AST 13→8, STA 8→9, STB 22→20, STG 25→22; AST-1c test FPR@95 recall (0.55) is still worse than baseline (0.45), so the gain is at the lower-recall point. T3 owns the formal baseline comparison.
+- Dev raw-score separation is not saturated for FPR@0.85 even though the evaluator's post-calibration dev metrics saturate; no tie-break was needed. Report raw-score dev values, not `dev_metrics`, when comparing placements.
 
 ---
 

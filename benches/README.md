@@ -137,6 +137,39 @@ This reads `benches/results/tuning/AST-1b/raw/` and writes `summary.json`, `cali
 `--experiment`; `--compare` with `--experiment` rejects `--results-dir`. Evaluating rows that
 contain an `experiment` field into `benches/results/` is rejected.
 
+### Placement sweep (T1)
+
+The placement sweep runs `start`/`middle`/`end` with `zero-pad` for each in-scope backend, at its
+native window and seed 42. Run one GPU model variant at a time in separate processes:
+
+```bash
+uv run python benches/run_bench.py --backend ast-60s \
+  --manifest test-audio/test-songs.csv --experiment AST-1a --placement start --seed 42 --device cuda
+uv run python benches/run_bench.py --backend ast-60s \
+  --manifest test-audio/test-songs.csv --experiment AST-1b --placement middle --seed 42 --device cuda
+uv run python benches/run_bench.py --backend ast-60s \
+  --manifest test-audio/test-songs.csv --experiment AST-1c --placement end --seed 42 --device cuda
+```
+
+Use `spectttra-alpha-120s` / `spectttra-beta-120s` / `spectttra-gamma-120s` with config prefixes
+`STA` / `STB` / `STG` (e.g. `STB-1b`) for the other backends. Each config writes
+`benches/results/tuning/<CONFIG>/raw/<backend>.jsonl` (400 rows) and never touches the Phase 5
+baseline artifacts.
+
+Selection is **dev-only** and is fixed before the runs: minimize human FPR at AI recall `0.85`
+(midpoint of the owner's ~80–90% tradeoff band) on dev raw scores; tie-break by a larger
+separation margin at that operating point, then higher dev ROC-AUC, then config name. Held-out
+test is reported once per selected config only. Build the comparison artifact from the raw files:
+
+```bash
+uv run python benches/placement_sweep.py \
+  --manifest test-audio/test-songs.csv --seed 42
+```
+
+This writes `benches/results/tuning/placement-sweep-summary.json` and `.md` beside the raw
+directories. The criterion helpers live in `benches/_shared/selection.py`; the raw JSONL stays
+git-ignored while the summary files are committable.
+
 ### Compare all available backends
 
 To score all available backends, write raw per-backend JSONL into `benches/results/raw/`, and
@@ -269,6 +302,8 @@ The manifest now holds 200 `human` and 200 `ai_generated` rows. It is the same
 - Baseline committed outputs: `benches/results/calibration.json`, `summary.json`, `report.md`.
 - Tuning raw JSONL: `benches/results/tuning/<config>/raw/` (git-ignored); tuning summaries and
   reports beside it are committable. Use the exact `--seed` and config name to rerun.
+- Placement-sweep comparison: `benches/results/tuning/placement-sweep-summary.{json,md}`
+  (committable; built from the raw JSONL by `benches/placement_sweep.py`).
 - Audio and model weights are never committed; weights download on first use into the cache
   controlled by `AIDETECT_CACHE_DIR` (default: the Hugging Face cache).
 
