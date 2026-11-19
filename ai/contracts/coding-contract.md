@@ -73,10 +73,10 @@ Settings live in `pyproject.toml` (line length 100, double quotes, trailing comm
 6. **Slow, GPU, or network tests** are marked `@pytest.mark.integration`, `@pytest.mark.slow` or `@pytest.mark.gpu`. The default `pytest -q` run excludes all marked tests; run them explicitly when the phase calls for it.
 7. **Coverage gate:** 80% line coverage on library modules once `aidetect` exists. Bench scripts are not coverage-gated, but their shared helpers in `benches/_shared/` are tested.
 8. Do not use `pytest.skip` to hide a failing test. Do not weaken assertions to make a test pass.
-9. Commit after each green red-green-refactor cycle, not a pile of unrelated changes at the end.
+9. Make one commit per phase, only after the phase is complete and the owner has reviewed it (§9); do not commit while the phase is in progress.
 10. **Test-first exemptions:** configuration, scaffolding, test fixtures, documentation and pure research have no runtime behaviour to test and need no failing test first. Every behaviour change and every bug fix still does (CC §4.1–4.3).
 
-Agent loop for every task: read contract → write test (unless exempt under §4.10) → run it and confirm failure → implement → run full suite + lint + types → refactor → commit.
+Agent loop for every task: read contract → write test (unless exempt under §4.10) → run it and confirm failure → implement → run full suite + lint + types → refactor → keep changes uncommitted until the phase is complete and reviewed (§9).
 
 ## 5. DRY rules
 
@@ -134,6 +134,7 @@ https://example.com/feed/ep12.mp3,ai_generated
 
 ## 9. Git and agent conduct
 
+- **One commit per phase, after completion and owner review.** Keep all phase changes uncommitted while working. When the phase is complete, show the owner the full diff and proposed commit message and wait for explicit approval before running `git commit`. This overrides commit timing in §4.9, §11 and the implementer prompt.
 - Small, focused commits with conventional prefixes: `feat:`, `fix:`, `test:`, `refactor:`, `docs:`, `chore:`, `bench:`.
 - One logical change per commit, with its tests. Do not bundle unrelated fixes.
 - Stay inside the assigned scope. If a task requires changing this contract, the repository layout, or shared interfaces, stop and ask instead of improvising.
@@ -159,4 +160,4 @@ A task is complete when:
 - [ ] No new dependency, large file, secret, or generated artifact was committed.
 - [ ] Existing shared behaviour was reused; the rule of three was applied before creating new abstractions.
 - [ ] Relevant docs/contracts were updated; decisions are recorded in the plan where the phase asks for them.
-- [ ] The commit is small, conventionally named, and contains only this task.
+- [ ] The phase's single commit is conventionally named, contains only this phase's work, and was approved by the owner after review.

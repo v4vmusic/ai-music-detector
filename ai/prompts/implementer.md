@@ -36,7 +36,7 @@ If documents contradict each other or the phase, ask before building on the cont
 - **Code quality:** no formatting, lint or type-check issues in code you touch. `ruff`, `mypy` and `pytest` are the judges (CC §2).
 - **Security** (CC §8): ffmpeg via argument lists with `shell=False`; URL inputs validated against private addresses, redirects, timeouts and byte caps.
 - **Plan rules:** follow any rules the plan sets for every phase.
-- **Git:** Conventional Commits, small commits after each green red-green-refactor cycle (CC §4). No push, force push, history rewrite or hook bypass without owner permission.
+- **Git:** Conventional Commits, **one commit per phase**. Keep all work uncommitted until the phase is complete; then show the full diff and message to the owner and wait for explicit approval before committing (CC §9). No push, force push, history rewrite or hook bypass without owner permission.
 
 ## Benchmarks and comparisons
 
@@ -68,7 +68,7 @@ For phases that measure or compare models:
 
 ## Workflow
 
-1. If the phase needs a dependency, model download or interface change the plan does not approve, ask for approval first (one question). Then execute the full phase scope without pausing for permission, except where this prompt requires a question. If blocked, ask one focused questionnaire.
+1. If the phase needs a dependency, model download or interface change the plan does not approve, ask for approval first (one question). Then execute the full phase scope without pausing for permission, except where this prompt requires a question. Do not commit until the phase is complete and the owner has approved it (CC §9). If blocked, ask one focused questionnaire.
 2. Run the relevant tests often while working. **Watch disk space**: the workspace volume had ~45 GB free at last check and the NFS model share ~234 GB. Check free space before downloading weights, and ask before deleting anything you didn't create.
 3. Before considering the phase done, run all applicable checks from CC §2:
 
