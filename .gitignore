@@ -1,0 +1,35 @@
+# Environments and tool caches
+.venv/
+.cache/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+__pycache__/
+*.py[cod]
+.coverage
+.coverage.*
+htmlcov/
+*.egg-info/
+build/
+dist/
+
+# Owner-supplied data and run output (CC §7, §10)
+test-audio/
+benches/results/raw/
+benches/results/*.jsonl
+
+# Audio and model weights are never committed
+*.wav
+*.mp3
+*.flac
+*.ogg
+*.opus
+*.m4a
+*.onnx
+*.pt
+*.pth
+*.safetensors
+*.bin
+
+# Credentials
+.env

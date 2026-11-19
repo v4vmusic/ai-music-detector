@@ -1,0 +1,46 @@
+[project]
+name = "ai-music-detector"
+version = "0.0.0"
+description = "Calibrated AI-generated music detection: bench harness and library"
+requires-python = ">=3.10,<3.11"
+dependencies = [
+  # numpy: float32 audio windows and all shared DSP/window math (CC §7).
+  "numpy>=1.26,<2",
+]
+
+[dependency-groups]
+dev = [
+  "pytest>=8.3,<9",
+  "pytest-cov>=5,<7",
+  "ruff>=0.6,<1",
+  "mypy>=1.11,<2",
+]
+
+[tool.uv]
+# Phase 0 is a bench skeleton; the library package is added in Phase 6.
+package = false
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["benches", "aidetect"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+warn_unreachable = true
+files = ["benches"]
+
+[tool.pytest.ini_options]
+testpaths = ["benches/tests"]
+addopts = "-m 'not integration and not slow and not gpu'"
+markers = [
+  "integration: requires external model weights, network or other unavailable services",
+  "slow: long-running test, excluded from the default run",
+  "gpu: requires a CUDA GPU, excluded from the default run",
+]
