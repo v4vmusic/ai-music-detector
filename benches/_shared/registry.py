@@ -5,19 +5,22 @@ from dataclasses import dataclass
 from types import MappingProxyType
 from typing import Final
 
-from benches._shared.constants import SAMPLE_RATE
+from benches._shared.constants import AI_GENERATED_LABEL, SAMPLE_RATE
 from benches._shared.errors import ModelLoadError
 
 MODEL_KEY_FAKEPRINT: Final = "fakeprint"
 MODEL_KEY_SPECTTRA_ALPHA: Final = "spectttra-alpha-120s"
 MODEL_KEY_SPECTTRA_BETA: Final = "spectttra-beta-120s"
 MODEL_KEY_SPECTTRA_GAMMA: Final = "spectttra-gamma-120s"
+MODEL_KEY_AST: Final = "ast-60s"
 SPECTTRA_DEFAULT_OFFSET_SECONDS: Final = 25.0
+AST_DEFAULT_OFFSET_SECONDS: Final = 25.0
 MODEL_KEYS: Final[tuple[str, ...]] = (
     MODEL_KEY_FAKEPRINT,
     MODEL_KEY_SPECTTRA_ALPHA,
     MODEL_KEY_SPECTTRA_BETA,
     MODEL_KEY_SPECTTRA_GAMMA,
+    MODEL_KEY_AST,
 )
 
 
@@ -108,8 +111,55 @@ def get_specttra_spec(key: str) -> SpecTTTraSpec:
     return spec
 
 
+@dataclass(frozen=True, slots=True)
+class AstSpec:
+    """Identity, window and positive label for the AST audio-classification checkpoint."""
+
+    key: str
+    model_id: str
+    revision: str
+    window_seconds: float
+    sample_rate: int
+    default_offset_seconds: float
+    positive_label: str
+    preprocessing_version: str
+    feature_max_length: int
+    feature_num_mel_bins: int
+    feature_mean: float
+    feature_std: float
+
+
+# The checkpoint has no preprocessor_config.json; its notebook uses the feature extractor from
+# MIT/ast-finetuned-audioset-10-10-0.4593 with max_length raised to 6000 (60 s at 16 kHz).
+AST_SPEC: Final = AstSpec(
+    key=MODEL_KEY_AST,
+    model_id="AI-Music-Detection/ai_music_detection_large_60s",
+    revision="5e29461bbfc41dc5fe4ed5f7fadc961aa84a7e3e",
+    window_seconds=60.0,
+    sample_rate=SAMPLE_RATE,
+    default_offset_seconds=AST_DEFAULT_OFFSET_SECONDS,
+    positive_label=AI_GENERATED_LABEL,
+    preprocessing_version="ast-1",
+    feature_max_length=6_000,
+    feature_num_mel_bins=128,
+    feature_mean=-4.2677393,
+    feature_std=4.5689974,
+)
+
+
+def get_ast_spec(key: str) -> AstSpec:
+    """Look up the AST backend key; unknown keys fail with an actionable error."""
+
+    if key != AST_SPEC.key:
+        raise ModelLoadError(f"Unknown AST model {key!r}; expected {AST_SPEC.key!r}")
+    return AST_SPEC
+
+
 __all__ = [
+    "AST_DEFAULT_OFFSET_SECONDS",
+    "AST_SPEC",
     "FAKEPRINT_SPEC",
+    "MODEL_KEY_AST",
     "MODEL_KEY_FAKEPRINT",
     "MODEL_KEY_SPECTTRA_ALPHA",
     "MODEL_KEY_SPECTTRA_BETA",
@@ -117,7 +167,9 @@ __all__ = [
     "MODEL_KEYS",
     "SPECTTRA_DEFAULT_OFFSET_SECONDS",
     "SPECTTRA_SPECS",
+    "AstSpec",
     "ModelSpec",
     "SpecTTTraSpec",
+    "get_ast_spec",
     "get_specttra_spec",
 ]

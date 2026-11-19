@@ -10,6 +10,7 @@ from numpy.typing import NDArray
 
 from benches._shared.constants import SAMPLE_RATE
 from benches._shared.errors import AudioDecodeError, ModelLoadError
+from benches._shared.probability import sigmoid
 from benches._shared.registry import SpecTTTraSpec, get_specttra_spec
 from benches._shared.types import (
     AudioWindow,
@@ -38,15 +39,6 @@ class ClassifierLoader(Protocol):
     def __call__(
         self, spec: SpecTTTraSpec, *, cache_dir: Path | None, device: str
     ) -> Classifier: ...
-
-
-def sigmoid(logit: float) -> float:
-    """Numerically stable sigmoid of a single logit, with no overflow for extremes."""
-
-    if logit >= 0.0:
-        return 1.0 / (1.0 + math.exp(-logit))
-    exponential = math.exp(logit)
-    return exponential / (1.0 + exponential)
 
 
 class SpecTTTraBackend:

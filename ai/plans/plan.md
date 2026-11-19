@@ -51,7 +51,7 @@ Benchmark all *available* models; "all four" is qualified by these constraints.
 - [x] **Phase 0 — Bench foundations** — no models or downloads; manifest, audio adapter, shared types
 - [x] **Phase 1 — Fakeprint backend** — ONNX, CPU, cheapest model first
 - [x] **Phase 2 — SpecTTTra backends** — alpha/beta/gamma 120s
-- [ ] **Phase 3 — AST backend** — Hugging Face AST, 60s
+- [x] **Phase 3 — AST backend** — Hugging Face AST, 60s
 - [ ] **Phase 4 — MusicDET feasibility** — research spike, gate D2
 - [ ] **Phase 5 — Benchmark harness and report** — k-fold, metrics, calibration, gate D1
 - [ ] **Phase 6 — Library foundation** — create `ai-music-detector/`, promote shared code
@@ -184,7 +184,7 @@ Generate fixtures in test code with the standard `wave` module; commit no binary
 
 ### Phase 3 — AST backend
 
-**Status:** [ ] not started  **Depends on:** Phase 0, Phase 1 runner pattern
+**Status:** [x] done  **Depends on:** Phase 0, Phase 1 runner pattern
 
 **Goal:** an AST backend using the Hugging Face model with a 60 s window, behind the same interface. Weights 363 MB; no published metrics, so treat results as evidence only.
 
@@ -193,11 +193,11 @@ Generate fixtures in test code with the standard `wave` module; commit no binary
 **Out of scope:** training, other AST checkpoints, the library.
 
 **Test-first checklist:**
-- [ ] Registry key maps to the right model id and 60 s window.
-- [ ] Label-to-probability mapping is verified explicitly against the model's `id2label`; a swapped mapping fails the test.
-- [ ] Fake pipeline with known logits yields expected probability and metadata.
-- [ ] Wrong input shape or sample rate raises the shared error.
-- [ ] Two consecutive `load()` calls do not duplicate the model in memory (fake loader tracks calls).
+- [x] Registry key maps to the right model id and 60 s window.
+- [x] Label-to-probability mapping is verified explicitly against the model's `id2label`; a swapped mapping fails the test.
+- [x] Fake pipeline with known logits yields expected probability and metadata.
+- [x] Wrong input shape or sample rate raises the shared error.
+- [x] Two consecutive `load()` calls do not duplicate the model in memory (fake loader tracks calls).
 
 **Implementation notes:** backend receives an `AudioWindow`; only one backend module imports `transformers`. This is the third backend, so promote the probability conversion to `benches/_shared/` here (rule of three, CC §5.2) and update the Phase 1 and Phase 2 backends to import it.
 
@@ -205,9 +205,15 @@ Generate fixtures in test code with the standard `wave` module; commit no binary
 
 **Human testing:** score a file with AST and fakeprint; compare outputs qualitatively; seeded rerun matches within an absolute tolerance of 1e-4 (record larger GPU drift); `nvidia-smi` memory returns to baseline.
 
-**Done criteria:** [ ] checklist tests red then green; [ ] CC §2 checks pass; [ ] download size reported; [ ] weights not committed.
+**Done criteria:** [x] checklist tests red then green; [x] CC §2 checks pass; [x] download size reported; [x] weights not committed.
 
-**For later phases:** *(agent fills this in.)*
+**For later phases:**
+- **Phase 5/6:** the AST checkpoint has no `preprocessor_config.json`; `AST_SPEC.feature_*` fields and `run_bench._load_ast_pipeline()` build the training extractor explicitly. `transformers==4.48.3` rejects `map_location` on `ASTForAudioClassification.from_pretrained` — do not re-add it.
+- **Phase 5/6:** `ai_probability()` in `benches/backends/ast.py` resolves the AI class via `id2label`, never class index; AST pipeline outputs are probabilities, so `raw_score == calibrated_probability` (no sigmoid).
+- **Phase 5:** two-track smoke (seed 42, 25 s offset): human `0.4612`, AI `0.9997`; seeded rerun had 0.0 drift and VRAM returned to the 63 MiB baseline. Directional only; no tuning.
+- **Phase 5/6:** `sigmoid()` and `as_probability()` now live in `benches/_shared/probability.py`; fakeprint validates its ONNX output without a second sigmoid (Phase 1 decision), so only SpecTTTra applies `sigmoid()`.
+- **Phase 6:** `benches/backends/ast.py` dedupes pipeline creation with `lru_cache` and calls `unload()`; replace with the library's model lifecycle rather than keeping a module-level pipeline.
+- **Phase 6/7:** heavy `transformers` imports stay lazy in `run_bench`, so plain `import benches.backends.ast` needs no model library; keep that pattern in `aidetect`.
 
 ---
 

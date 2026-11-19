@@ -103,6 +103,16 @@ def test_load_rejects_a_session_with_the_wrong_input_name() -> None:
         load(session=_FakeSession(input_name="audio"))
 
 
+def test_fake_session_probability_is_validated_without_a_second_sigmoid() -> None:
+    window = AudioWindow(samples=_tone(), window_seconds=10.0)
+
+    with pytest.raises(ModelLoadError, match="probability"):
+        load(session=_FakeSession(output=1.4)).score(window)
+
+    result = load(session=_FakeSession(output=0.73)).score(window)
+    assert result.calibrated_probability == pytest.approx(0.73)
+
+
 @pytest.mark.parametrize(
     "bad_samples,bad_rate",
     [

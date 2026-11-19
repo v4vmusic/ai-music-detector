@@ -23,18 +23,24 @@ if str(_WORKSPACE_ROOT) not in sys.path:
     sys.path.insert(0, str(_WORKSPACE_ROOT))
 
 from benches._shared.audio import decode_window  # noqa: E402
+from benches._shared.constants import SAMPLE_RATE  # noqa: E402
 from benches._shared.errors import AidetectError, ModelLoadError  # noqa: E402
 from benches._shared.manifest import ManifestEntry, load_manifest  # noqa: E402
 from benches._shared.registry import (  # noqa: E402
+    AST_SPEC,
     FAKEPRINT_SPEC,
+    MODEL_KEY_AST,
     MODEL_KEY_FAKEPRINT,
     MODEL_KEYS,
     SPECTTRA_SPECS,
+    AstSpec,
     ModelSpec,
     SpecTTTraSpec,
     get_specttra_spec,
 )
 from benches._shared.types import AudioWindow, ModelMetadata, ModelOutput  # noqa: E402
+from benches.backends.ast import Pipeline  # noqa: E402
+from benches.backends.ast import load as load_ast  # noqa: E402
 from benches.backends.fakeprint import load as load_fakeprint  # noqa: E402
 from benches.backends.spctttra import Classifier  # noqa: E402
 from benches.backends.spctttra import load as load_spctttra  # noqa: E402
@@ -51,10 +57,18 @@ SPECTTRA_VERSION_NAMES: Final[tuple[str, ...]] = (
     "sonics",
     "huggingface_hub",
 )
+AST_VERSION_NAMES: Final[tuple[str, ...]] = (
+    "numpy",
+    "torch",
+    "transformers",
+    "tokenizers",
+    "huggingface_hub",
+)
 DEFAULT_OFFSETS: Final[Mapping[str, float]] = MappingProxyType(
     {
         MODEL_KEY_FAKEPRINT: 0.0,
         **{key: spec.default_offset_seconds for key, spec in SPECTTRA_SPECS.items()},
+        MODEL_KEY_AST: AST_SPEC.default_offset_seconds,
     }
 )
 
@@ -233,6 +247,76 @@ def _load_spctttra_classifier(
     return _HFClassifier(model=model, device=device, torch_module=torch)
 
 
+class _HFPipeline:
+    """Adapts the HF audio-classification pipeline to the backend's id-keyed surface."""
+
+    def __init__(self, classifier: Any, id2label: Mapping[int, str]) -> None:
+        # Any: transformers ships no stubs/py.typed, so there is no bench-side type (CC §3).
+        self._classifier = classifier
+        self._id2label = id2label
+
+    def __call__(self, samples: NDArray[np.float32], *, sampling_rate: int) -> Mapping[int, float]:
+        predictions = self._classifier(samples, sampling_rate=sampling_rate, top_k=None)
+        by_label: dict[str, float] = {}
+        for item in predictions:
+            label, score = item["label"], item["score"]
+            if not isinstance(label, str) or not isinstance(score, (int, float)):
+                raise ModelLoadError("HF AST pipeline returned an invalid prediction")
+            by_label[label] = float(score)
+        return {
+            index: by_label[label] for index, label in self._id2label.items() if label in by_label
+        }
+
+    def id2label(self) -> Mapping[int, str]:
+        return self._id2label
+
+    def unload(self) -> None:
+        del self._classifier
+
+
+def _load_ast_pipeline(spec: AstSpec, *, cache_dir: Path | None, device: str) -> Pipeline:
+    """Pin the HF AST snapshot and supply its training feature extractor; imports stay lazy."""
+
+    try:
+        from transformers import (  # type: ignore[import-untyped]
+            ASTFeatureExtractor,
+            AutoConfig,
+            AutoModelForAudioClassification,
+        )
+        from transformers import pipeline as hf_pipeline
+    except ImportError as exc:
+        raise ModelLoadError("AST needs transformers; install it with `uv sync`") from exc
+
+    download_kwargs: dict[str, str] = {"revision": spec.revision}
+    if cache_dir is not None:
+        download_kwargs["cache_dir"] = str(cache_dir)
+    try:
+        config = AutoConfig.from_pretrained(spec.model_id, **download_kwargs)
+        feature_extractor = ASTFeatureExtractor(
+            num_mel_bins=spec.feature_num_mel_bins,
+            sampling_rate=SAMPLE_RATE,
+            max_length=spec.feature_max_length,
+            mean=spec.feature_mean,
+            std=spec.feature_std,
+        )
+        model = AutoModelForAudioClassification.from_pretrained(spec.model_id, **download_kwargs)
+        classifier = hf_pipeline(
+            "audio-classification",
+            model=model,
+            config=config,
+            feature_extractor=feature_extractor,
+            device=0 if device.startswith("cuda") else -1,
+        )
+    except Exception as exc:
+        raise ModelLoadError(f"Cannot load {spec.model_id}@{spec.revision}: {exc}") from exc
+
+    labels = getattr(config, "id2label", None)
+    if not isinstance(labels, Mapping) or not labels:
+        raise ModelLoadError(f"No id2label in {spec.model_id}@{spec.revision}")
+    id2label = {int(index): str(label) for index, label in labels.items()}
+    return _HFPipeline(classifier=classifier, id2label=id2label)
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Score a labeled manifest with one bench backend.")
     parser.add_argument("--backend", required=True, choices=MODEL_KEYS)
@@ -257,6 +341,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         if args.backend == MODEL_KEY_FAKEPRINT:
             backend: Scorer = load_fakeprint(model_bytes=_load_weights(FAKEPRINT_SPEC))
             version_names = VERSION_NAMES
+        elif args.backend == MODEL_KEY_AST:
+            pipeline = _load_ast_pipeline(AST_SPEC, cache_dir=_cache_dir(), device=args.device)
+            backend = load_ast(MODEL_KEY_AST, pipeline=pipeline)
+            version_names = AST_VERSION_NAMES
         else:
             spec = get_specttra_spec(args.backend)
             classifier = _load_spctttra_classifier(spec, cache_dir=_cache_dir(), device=args.device)

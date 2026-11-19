@@ -13,9 +13,9 @@ uv sync
 ```
 
 This creates the root `.venv` and installs the pinned runtime dependencies (NumPy, onnxruntime,
-`torch`/`torchaudio` 2.6.0, `sonics` and its dependencies) and dev tools from `uv.lock`.
-`sonics` is pinned to commit `9156ffad151f797c71556923c4a02fa01fa8fc91` on GitHub. A CUDA GPU
-is only needed for the SpecTTTra GPU backends; CPU fakeprint runs need no GPU.
+`torch`/`torchaudio` 2.6.0, `sonics`, `transformers` 4.48.3 and their dependencies) and dev tools
+from `uv.lock`. `sonics` is pinned to commit `9156ffad151f797c71556923c4a02fa01fa8fc91` on GitHub.
+A CUDA GPU is only needed for the SpecTTTra and AST backends; CPU fakeprint runs need no GPU.
 
 ## Manifest format
 
@@ -62,7 +62,8 @@ uv run python benches/run_bench.py \
 
 Use `--manifest test-audio/test-songs.csv` for bench runs. Its extra metadata columns are
 ignored and URL rows are skipped with a warning. Fakeprint scores a 10 s window from the start
-of each track; SpecTTTra scores a 120 s window at 25 s by default.
+of each track; SpecTTTra scores a 120 s window at 25 s by default; AST scores a 60 s window at
+25 s by default.
 
 Each local manifest row produces one JSONL line. Scored rows contain the shared `ModelOutput`
 fields plus `path`, `label`, `seed`, `config_hash` and package `versions`; `timings.score_seconds`
@@ -108,6 +109,30 @@ window uses substantially less. Check `nvidia-smi` between runs — memory shoul
 baseline. Re-running with the same seed and manifest should match within an absolute tolerance
 of 1e-4; record any larger GPU drift. The unit tests use an injected classifier and need no
 weights, GPU or network.
+
+## AST backend (GPU)
+
+The Hugging Face AST fine-tune scores a 60 s window at 25 s by default:
+
+```bash
+uv run python benches/run_bench.py \
+  --backend ast-60s \
+  --manifest /tmp/smoke.csv \
+  --out benches/results/raw/ast.jsonl \
+  --seed 42 --offset 25 --device cuda
+```
+
+Pinned revision `5e29461bbfc41dc5fe4ed5f7fadc961aa84a7e3e`; `model.safetensors` is 363.1 MB and
+downloads once into `AIDETECT_CACHE_DIR`. Inference on one 60 s window used roughly 1–2 GB VRAM;
+`nvidia-smi` returned to the 63 MiB baseline after the process exited. A seeded two-track rerun
+had 0.0 probability drift; record any larger GPU drift.
+
+The checkpoint has no `preprocessor_config.json`. Its training notebook used the
+`MIT/ast-finetuned-audioset-10-10-0.4593` AST feature extractor with `max_length=6000`, 128 mel
+bins, 16 kHz and mean/std `-4.2677393` / `4.5689974`; `run_bench._load_ast_pipeline()` builds that
+extractor from `AST_SPEC` so no base-model download is needed. The pinned config's `id2label` is
+`{0: human, 1: ai_generated}`; the backend resolves the AI class by label, not by class index.
+Unit tests inject a pipeline and need no weights, GPU or network.
 
 ## Staging the AI audio (download script)
 

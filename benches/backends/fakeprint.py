@@ -12,6 +12,7 @@ from numpy.lib.stride_tricks import sliding_window_view
 from numpy.typing import NDArray
 
 from benches._shared.errors import ModelLoadError
+from benches._shared.probability import as_probability
 from benches._shared.registry import FAKEPRINT_SPEC
 from benches._shared.types import (
     AudioWindow,
@@ -97,7 +98,7 @@ class FakeprintBackend:
         started = perf_counter()
         features = extract_fakeprint(window.samples)
         result = self.session.run(None, {INPUT_NAME: features.reshape(1, -1)})
-        probability = float(np.asarray(result[0]).reshape(-1)[0])
+        probability = as_probability(float(np.asarray(result[0]).reshape(-1)[0]))
 
         return ModelOutput(
             raw_score=probability,
