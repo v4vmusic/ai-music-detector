@@ -48,7 +48,7 @@ Benchmark all *available* models; "all four" is qualified by these constraints.
 
 ## 4. Phase overview
 
-- [ ] **Phase 0 — Bench foundations** — no models or downloads; manifest, audio adapter, shared types
+- [x] **Phase 0 — Bench foundations** — no models or downloads; manifest, audio adapter, shared types
 - [ ] **Phase 1 — Fakeprint backend** — ONNX, CPU, cheapest model first
 - [ ] **Phase 2 — SpecTTTra backends** — alpha/beta/gamma 120s
 - [ ] **Phase 3 — AST backend** — Hugging Face AST, 60s
@@ -70,7 +70,7 @@ Record a gate decision as one dated line with the choice; the benchmark report h
 
 ### Phase 0 — Bench foundations
 
-**Status:** [ ] not started  **Depends on:** nothing
+**Status:** [x] done  **Depends on:** nothing
 
 **Goal:** a runnable `benches/` skeleton with shared code for later backends: manifest loading, audio window decoding, shared result types. No models, no downloads, no GPU, no network.
 
@@ -79,11 +79,11 @@ Record a gate decision as one dated line with the choice; the benchmark report h
 **Out of scope:** model wrappers, URL inputs, metrics, the library.
 
 **Test-first checklist:**
-- [ ] Manifest rejects a bad label, accepts a valid row, resolves relative paths, ignores extra columns, and skips a URL row with a warning.
-- [ ] Decode window math: sample count, offset, mono shape, float32 dtype, value range; generated WAV fixture only.
-- [ ] Tracks from 5 s up to the required window are zero-padded with a `short_track_padded` warning; tracks under 5 s raise `AudioDecodeError`.
-- [ ] Non-audio input raises `AudioDecodeError`, not an empty array.
-- [ ] Shared dataclasses reject out-of-range probabilities and missing required fields.
+- [x] Manifest rejects a bad label, accepts a valid row, resolves relative paths, ignores extra columns, and skips a URL row with a warning.
+- [x] Decode window math: sample count, offset, mono shape, float32 dtype, value range; generated WAV fixture only.
+- [x] Tracks from 5 s up to the required window are zero-padded with a `short_track_padded` warning; tracks under 5 s raise `AudioDecodeError`.
+- [x] Non-audio input raises `AudioDecodeError`, not an empty array.
+- [x] Shared dataclasses reject out-of-range probabilities and missing required fields.
 
 Generate fixtures in test code with the standard `wave` module; commit no binary audio.
 
@@ -93,9 +93,17 @@ Generate fixtures in test code with the standard `wave` module; commit no binary
 
 **Human testing:** create a 10 s synthetic WAV in `/tmp`; decode a 3 s window at 2 s offset and confirm shape `(48000,)`, float32; run all CC §2 checks.
 
-**Done criteria:** [ ] every checklist test was red then green; [ ] CC §2 checks pass; [ ] no model weights, audio or network calls added.
+**Done criteria:** [x] every checklist test was red then green; [x] CC §2 checks pass; [x] no model weights, audio or network calls added.
 
-**For later phases:** *(agent fills this in: ≤10 short bullets naming the later phase each item is for.)*
+**For later phases:**
+- **Phase 1:** `benches/decode.py` needs its `sys.path` bootstrap to survive the CC §10 standalone-file command; the first runner must reuse that pattern (or extract a shared helper at the rule-of-three point).
+- **Phase 1:** `load_manifest()` drops URL rows after a warning, so runner row counts and warnings cover local entries only.
+- **Phase 1:** `test-audio/` is empty; the real-weights smoke run needs an owner-supplied or synthetic local manifest (no audio is committed).
+- **Phase 1/2:** `decode_window()` buffers the whole file before slicing; fine for 120 s windows, revisit if much longer inputs appear.
+- **Phase 2/3:** `benches/_shared/registry.py` holds only `MODEL_KEY_FAKEPRINT`; add variant keys and any id → revision/window mapping there, not in backends.
+- **Phase 5:** `dataclasses.asdict(ModelOutput)` already yields JSON-friendly rows including nested `Timings`; extend that shape rather than duplicating it.
+- **Phase 6:** root `pyproject.toml` sets `[tool.uv] package = false` because the library does not exist yet; remove it when adding build metadata.
+- **Phase 6+:** `benches/_shared/errors.py` defines only the base error plus audio/manifest subclasses; add model/network subclasses when needed and promote the module into `aidetect`.
 
 ---
 
