@@ -247,3 +247,202 @@ def test_run_passes_window_duration_and_offset_to_decoder(
 
     assert count == 1
     assert calls == [(good.resolve(), 10.0, 25.0)]
+
+
+def test_compare_mode_writes_summary_calibration_report_and_records_failure(
+    tmp_path: Path,
+) -> None:
+    raw_dir = tmp_path / "raw"
+    raw_dir.mkdir()
+    rows = [
+        {
+            "path": "/h1.wav",
+            "label": "human",
+            "raw_score": -2.0,
+            "calibrated_probability": 0.11920292202211755,
+            "model_id": "awsaf49/sonics-spectttra-alpha-120s",
+            "model_revision": "rev-alpha",
+            "timings": {"score_seconds": 0.1, "gpu_seconds": None},
+            "config_hash": "hash-alpha",
+            "versions": {"numpy": "1.26.4", "torch": "2.6.0"},
+            "seed": 42,
+            "warnings": [],
+            "window": "120s@16000Hz@25s",
+        },
+        {
+            "path": "/h2.wav",
+            "label": "human",
+            "raw_score": -1.5,
+            "calibrated_probability": 0.18242552380635635,
+            "model_id": "awsaf49/sonics-spectttra-alpha-120s",
+            "model_revision": "rev-alpha",
+            "timings": {"score_seconds": 0.1, "gpu_seconds": None},
+            "config_hash": "hash-alpha",
+            "versions": {"numpy": "1.26.4", "torch": "2.6.0"},
+            "seed": 42,
+            "warnings": [],
+            "window": "120s@16000Hz@25s",
+        },
+        {
+            "path": "/a1.wav",
+            "label": "ai_generated",
+            "raw_score": 1.5,
+            "calibrated_probability": 0.8175744761936437,
+            "model_id": "awsaf49/sonics-spectttra-alpha-120s",
+            "model_revision": "rev-alpha",
+            "timings": {"score_seconds": 0.1, "gpu_seconds": None},
+            "config_hash": "hash-alpha",
+            "versions": {"numpy": "1.26.4", "torch": "2.6.0"},
+            "seed": 42,
+            "warnings": [],
+            "window": "120s@16000Hz@25s",
+        },
+        {
+            "path": "/a2.wav",
+            "label": "ai_generated",
+            "raw_score": 2.0,
+            "calibrated_probability": 0.8807970779778823,
+            "model_id": "awsaf49/sonics-spectttra-alpha-120s",
+            "model_revision": "rev-alpha",
+            "timings": {"score_seconds": 0.1, "gpu_seconds": None},
+            "config_hash": "hash-alpha",
+            "versions": {"numpy": "1.26.4", "torch": "2.6.0"},
+            "seed": 42,
+            "warnings": [],
+            "window": "120s@16000Hz@25s",
+        },
+    ]
+    (raw_dir / "spectttra-alpha-120s.jsonl").write_text(
+        "\n".join(json.dumps(row, sort_keys=True) for row in rows) + "\n", encoding="utf-8"
+    )
+    # A failed backend run: every row is a decode failure (no raw_score).
+    (raw_dir / "ast-60s.jsonl").write_text(
+        json.dumps(
+            {
+                "path": "/x.wav",
+                "label": "human",
+                "error": "boom",
+                "warnings": ["decode_failed: boom"],
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    manifest = tmp_path / "manifest.csv"
+    manifest.write_text("path,label\n", encoding="utf-8")
+    results_dir = tmp_path / "results"
+
+    exit_code = main(
+        [
+            "--compare",
+            "--manifest",
+            str(manifest),
+            "--results-dir",
+            str(results_dir),
+            "--seed",
+            "42",
+            "--from-raw",
+            str(raw_dir),
+        ]
+    )
+    assert exit_code == 0
+
+    summary = json.loads((results_dir / "summary.json").read_text(encoding="utf-8"))
+    calibration = json.loads((results_dir / "calibration.json").read_text(encoding="utf-8"))
+    report = (results_dir / "report.md").read_text(encoding="utf-8")
+
+    alpha = summary["backends"]["spectttra-alpha-120s"]
+    assert alpha["ok"] is True
+    assert alpha["model_id"] == "awsaf49/sonics-spectttra-alpha-120s"
+    assert alpha["model_revision"] == "rev-alpha"
+    assert alpha["config_hash"] == "hash-alpha"
+    assert alpha["versions"]["numpy"] == "1.26.4"
+    assert alpha["timings"]["total_score_seconds"] == pytest.approx(0.4)
+    assert "metrics" in alpha
+    assert "roc_auc" in alpha["metrics"]
+
+    failed = summary["backends"]["ast-60s"]
+    assert failed["ok"] is False
+    assert "error" in failed
+
+    alpha_cal = calibration["models"]["spectttra-alpha-120s"]
+    assert "temperature" in alpha_cal
+    assert "low_threshold" in alpha_cal
+    assert "high_threshold" in alpha_cal
+    assert alpha_cal["model_id"] == "awsaf49/sonics-spectttra-alpha-120s"
+    assert alpha_cal["model_revision"] == "rev-alpha"
+    assert alpha_cal["config_hash"] == "hash-alpha"
+    assert "dev_metrics" in alpha_cal
+
+    assert "Limitations" in report
+    assert "small" in report.lower() or "directional" in report.lower()
+    assert "spectttra-alpha-120s" in report
+
+
+def test_compare_mode_runs_all_backends_and_records_load_failure(
+    tmp_path: Path, write_wav: WriteWav
+) -> None:
+    from benches._shared.registry import MODEL_KEY_FAKEPRINT
+
+    write_wav(tmp_path / "h.wav", 10.0)
+    write_wav(tmp_path / "a.wav", 10.0)
+    manifest = tmp_path / "manifest.csv"
+    manifest.write_text("path,label\nh.wav,human\na.wav,ai_generated\n", encoding="utf-8")
+    results_dir = tmp_path / "results"
+
+    class FixedScorer:
+        def __init__(self, model_id: str, revision: str) -> None:
+            self._model_id = model_id
+            self._revision = revision
+            self._calls = 0
+
+        def score(self, window: AudioWindow) -> ModelOutput:
+            # Manifest order in this test is human, ai_generated.
+            raw = -1.0 if self._calls == 0 else 1.0
+            self._calls += 1
+            return ModelOutput(
+                raw_score=raw,
+                calibrated_probability=0.1 if raw < 0 else 0.9,
+                model_id=self._model_id,
+                model_revision=self._revision,
+                window="10s@16000Hz",
+                warnings=window.warnings,
+                timings=Timings(score_seconds=0.001),
+            )
+
+        def metadata(self) -> ModelMetadata:
+            return ModelMetadata(
+                model_id=self._model_id,
+                revision=self._revision,
+                window_seconds=10.0,
+                sample_rate=SAMPLE_RATE,
+            )
+
+    def loader(key: str, device: str):  # type: ignore[no-untyped-def]
+        if key == MODEL_KEY_FAKEPRINT:
+            return FixedScorer("lofcz/ai-music-detector", "rev-fp"), ("numpy", "onnxruntime")
+        raise RuntimeError(f"cannot load {key}")
+
+    from benches.run_bench import run_compare
+
+    summary, calibration = run_compare(
+        load_manifest(manifest),
+        results_dir,
+        seed=42,
+        device="cpu",
+        backend_loader=loader,
+    )
+
+    assert (results_dir / "raw" / f"{MODEL_KEY_FAKEPRINT}.jsonl").exists()
+    assert summary["backends"][MODEL_KEY_FAKEPRINT]["ok"] is True
+    # Other backends failed to load but are recorded without corrupting fakeprint.
+    for key, info in summary["backends"].items():
+        if key == MODEL_KEY_FAKEPRINT:
+            continue
+        assert info["ok"] is False
+        assert "error" in info
+    assert "temperature" in calibration["models"][MODEL_KEY_FAKEPRINT]
+    assert (results_dir / "summary.json").exists()
+    assert (results_dir / "calibration.json").exists()
+    assert (results_dir / "report.md").exists()

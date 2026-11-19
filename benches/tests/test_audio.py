@@ -5,6 +5,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+from numpy.typing import NDArray
 
 from benches._shared.audio import decode_window
 from benches._shared.constants import WARNING_SHORT_TRACK_PADDED
@@ -63,3 +64,28 @@ def test_decode_window_rejects_non_positive_window(tmp_path: Path, write_wav: Wr
     audio = write_wav(tmp_path / "ten.wav", 10.0)
     with pytest.raises(ValueError, match="window"):
         decode_window(audio, window_seconds=0.0)
+
+
+def test_decode_window_peak_normalizes_out_of_range_samples(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # 6 s at 16 kHz, with peak 1.5 (> 1.0) -> should scale down to fit [-1, 1].
+    samples = np.linspace(-0.5, 0.5, 96_000, dtype=np.float32)
+    samples[100] = 1.5
+    samples[200] = -1.2
+    peak = float(np.max(np.abs(samples)))
+
+    def fake_decode_pcm(path: Path) -> NDArray[np.float32]:
+        return samples.copy()
+
+    monkeypatch.setattr("benches._shared.audio._decode_pcm", fake_decode_pcm)
+    audio = tmp_path / "hot.wav"
+    audio.write_bytes(b"placeholder")
+
+    with pytest.warns(UserWarning, match="peak_normalized_to_fit_range"):
+        window = decode_window(audio, window_seconds=6.0)
+
+    assert window.samples.shape == (96_000,)
+    assert "peak_normalized_to_fit_range" in window.warnings
+    assert float(np.max(np.abs(window.samples))) == pytest.approx(1.0)
+    np.testing.assert_allclose(window.samples, samples / peak, rtol=0, atol=1e-6)

@@ -45,7 +45,7 @@ from benches.backends.fakeprint import load as load_fakeprint  # noqa: E402
 from benches.backends.spctttra import Classifier  # noqa: E402
 from benches.backends.spctttra import load as load_spctttra  # noqa: E402
 
-__all__ = ["DEFAULT_OFFSETS", "main", "run"]
+__all__ = ["DEFAULT_OFFSETS", "compare_from_raw", "main", "run", "run_compare"]
 
 DEFAULT_SEED = 42
 MAX_WEIGHTS_BYTES = 1_000_000
@@ -317,12 +317,204 @@ def _load_ast_pipeline(spec: AstSpec, *, cache_dir: Path | None, device: str) ->
     return _HFPipeline(classifier=classifier, id2label=id2label)
 
 
+def _write_json(path: Path, payload: Any) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def _load_raw_dir(raw_dir: Path) -> dict[str, list[dict[str, Any]]]:
+    from benches._shared.eval import load_raw_rows
+
+    per_backend: dict[str, list[dict[str, Any]]] = {}
+    if not raw_dir.exists():
+        return per_backend
+    allowed = set(MODEL_KEYS)
+    for path in sorted(raw_dir.glob("*.jsonl")):
+        if path.stem in allowed:
+            per_backend[path.stem] = load_raw_rows(path)
+    return per_backend
+
+
+def compare_from_raw(
+    raw_dir: Path,
+    results_dir: Path,
+    *,
+    seed: int = DEFAULT_SEED,
+    k_folds: int = 5,
+    backend_status_overrides: Mapping[str, Mapping[str, Any]] | None = None,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    from benches._shared.eval import (
+        evaluate_model_rows,
+        summarize_backends,
+        write_calibration,
+        write_report,
+        write_summary,
+    )
+
+    per_backend_rows = _load_raw_dir(raw_dir)
+    model_calibrations: dict[str, dict[str, Any]] = {}
+    model_results: dict[str, dict[str, Any]] = {}
+    backend_status: dict[str, dict[str, Any]] = {}
+    split_strategy = "none"
+
+    for key in MODEL_KEYS:
+        override = dict((backend_status_overrides or {}).get(key, {}))
+        rows = per_backend_rows.get(key, [])
+        if not rows:
+            status = {"ok": False, "error": "no raw results"}
+            status.update(override)
+            backend_status[key] = status
+            model_results[key] = {
+                "model_id": None,
+                "model_revision": None,
+                "config_hash": None,
+                "versions": None,
+                "timings": {"total_score_seconds": 0.0, "peak_vram_bytes": None},
+                "metrics": {},
+                "dev_metrics": {},
+                "scored_tracks": 0,
+                "failed_tracks": 0,
+            }
+            continue
+        evaluation = evaluate_model_rows(rows, seed=seed, k_folds=k_folds)
+        split_strategy = str(evaluation.get("split_strategy") or split_strategy)
+        scored = int(evaluation.get("scored_tracks") or 0)
+        has_scored = scored > 0
+        status = {"ok": has_scored}
+        if not has_scored:
+            status["error"] = "no scored rows"
+        status.update(override)
+        backend_status[key] = status
+        model_results[key] = {
+            "model_id": evaluation.get("model_id"),
+            "model_revision": evaluation.get("model_revision"),
+            "config_hash": evaluation.get("config_hash"),
+            "versions": evaluation.get("versions"),
+            "timings": evaluation.get(
+                "timings", {"total_score_seconds": 0.0, "peak_vram_bytes": None}
+            ),
+            "metrics": evaluation.get("test_metrics", {}),
+            "dev_metrics": evaluation.get("dev_metrics", {}),
+            "scored_tracks": evaluation.get("scored_tracks", 0),
+            "failed_tracks": evaluation.get("failed_tracks", 0),
+        }
+        model_calibrations[key] = {
+            "model_id": evaluation.get("model_id"),
+            "model_revision": evaluation.get("model_revision"),
+            "config_hash": evaluation.get("config_hash"),
+            "calibration": evaluation["calibration"],
+            "dev_metrics": evaluation.get("dev_metrics", {}),
+        }
+
+    summary = summarize_backends(
+        per_backend_rows,
+        backend_status=backend_status,
+        seed=seed,
+        split_strategy=split_strategy,
+        model_results=model_results,
+    )
+
+    calibration_path = results_dir / "calibration.json"
+    summary_path = results_dir / "summary.json"
+    report_path = results_dir / "report.md"
+    write_calibration(
+        calibration_path,
+        model_calibrations=model_calibrations,
+        seed=seed,
+        split_strategy=split_strategy,
+    )
+    write_summary(summary_path, summary)
+    calibration_payload = json.loads(calibration_path.read_text(encoding="utf-8"))
+    write_report(report_path, summary, calibration_payload)
+    return summary, calibration_payload
+
+
+def _default_backend_loader(key: str, device: str) -> tuple[Scorer, Sequence[str]]:
+    if key == MODEL_KEY_FAKEPRINT:
+        return load_fakeprint(model_bytes=_load_weights(FAKEPRINT_SPEC)), VERSION_NAMES
+    if key == MODEL_KEY_AST:
+        pipeline = _load_ast_pipeline(AST_SPEC, cache_dir=_cache_dir(), device=device)
+        return load_ast(MODEL_KEY_AST, pipeline=pipeline), AST_VERSION_NAMES
+    spec = get_specttra_spec(key)
+    classifier = _load_spctttra_classifier(spec, cache_dir=_cache_dir(), device=device)
+    return load_spctttra(key, classifier=classifier), SPECTTRA_VERSION_NAMES
+
+
+def run_compare(
+    entries: Sequence[ManifestEntry],
+    results_dir: Path,
+    *,
+    seed: int = DEFAULT_SEED,
+    device: str = "cuda",
+    backend_loader: Any = None,
+    k_folds: int = 5,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    raw_dir = results_dir / "raw"
+    raw_dir.mkdir(parents=True, exist_ok=True)
+    loader = backend_loader or _default_backend_loader
+    backend_status_overrides: dict[str, dict[str, Any]] = {}
+
+    for key in MODEL_KEYS:
+        out_path = raw_dir / f"{key}.jsonl"
+        try:
+            backend, version_names = loader(key, device)
+            offset = DEFAULT_OFFSETS[key]
+            run(
+                entries,
+                out_path,
+                backend,
+                seed=seed,
+                offset_seconds=offset,
+                version_names=version_names,
+            )
+            unload = getattr(backend, "unload", None)
+            if callable(unload):
+                unload()
+            backend_status_overrides[key] = {"ok": True}
+        except Exception as exc:  # noqa: BLE001 - record and continue with other backends
+            backend_status_overrides[key] = {"ok": False, "error": f"{type(exc).__name__}: {exc}"}
+            # Ensure a raw file exists for provenance even on total failure.
+            if not out_path.exists():
+                out_path.write_text("", encoding="utf-8")
+
+    return compare_from_raw(
+        raw_dir,
+        results_dir,
+        seed=seed,
+        k_folds=k_folds,
+        backend_status_overrides=backend_status_overrides,
+    )
+
+
 def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Score a labeled manifest with one bench backend.")
-    parser.add_argument("--backend", required=True, choices=MODEL_KEYS)
+    parser = argparse.ArgumentParser(description="Score a labeled manifest with bench backends.")
+    parser.add_argument(
+        "--compare",
+        action="store_true",
+        help="evaluate available backends and write calibration/summary/report",
+    )
+    parser.add_argument("--backend", choices=MODEL_KEYS, help="single backend to score")
     parser.add_argument("--manifest", required=True, type=Path, help="path,label CSV manifest")
-    parser.add_argument("--out", required=True, type=Path, help="raw JSONL output path")
+    parser.add_argument("--out", type=Path, help="raw JSONL output path for single-backend mode")
+    parser.add_argument(
+        "--results-dir",
+        type=Path,
+        default=Path("benches/results"),
+        help="directory for raw/, calibration.json, summary.json and report.md (compare mode)",
+    )
+    parser.add_argument(
+        "--from-raw",
+        type=Path,
+        default=None,
+        help="evaluate existing raw JSONL files from this directory instead of running models",
+    )
     parser.add_argument("--seed", default=DEFAULT_SEED, type=int, help="run seed (default: 42)")
+    parser.add_argument(
+        "--folds",
+        type=int,
+        default=None,
+        help="k for stratified k-fold when classes are small (default: 5)",
+    )
     parser.add_argument(
         "--offset",
         type=float,
@@ -335,6 +527,40 @@ def main(argv: Sequence[str] | None = None) -> int:
         help="torch device for GPU backends (default: cuda)",
     )
     args = parser.parse_args(argv)
+
+    if args.compare:
+        if args.backend or args.out:
+            print("error: --compare does not take --backend or --out", file=sys.stderr)
+            return 2
+        k_folds = args.folds if args.folds is not None else 5
+        raw_dir = args.from_raw if args.from_raw is not None else args.results_dir / "raw"
+        try:
+            if args.from_raw:
+                summary, _calibration = compare_from_raw(
+                    raw_dir, args.results_dir, seed=args.seed, k_folds=k_folds
+                )
+            else:
+                entries = load_manifest(args.manifest)
+                summary, _calibration = run_compare(
+                    entries,
+                    args.results_dir,
+                    seed=args.seed,
+                    device=args.device,
+                    k_folds=k_folds,
+                )
+        except (AidetectError, ValueError, OSError, json.JSONDecodeError) as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 1
+        ok = sum(1 for b in summary.get("backends", {}).values() if b.get("ok"))
+        print(
+            f"wrote calibration/summary/report to {args.results_dir} "
+            f"({ok} backends with scored rows)",
+            file=sys.stderr,
+        )
+        return 0
+
+    if not args.backend or args.out is None:
+        parser.error("the following arguments are required: --backend, --out")
 
     try:
         entries = load_manifest(args.manifest)

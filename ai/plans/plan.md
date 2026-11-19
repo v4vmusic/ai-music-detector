@@ -53,7 +53,7 @@ Benchmark all *available* models; "all four" is qualified by these constraints.
 - [x] **Phase 2 — SpecTTTra backends** — alpha/beta/gamma 120s
 - [x] **Phase 3 — AST backend** — Hugging Face AST, 60s
 - [x] **Phase 4 — MusicDET feasibility** — research spike, gate D2
-- [ ] **Phase 5 — Benchmark harness and report** — k-fold, metrics, calibration, gate D1
+- [x] **Phase 5 — Benchmark harness and report** — k-fold, metrics, calibration, gate D1
 - [ ] **Phase 6 — Library foundation** — create `ai-music-detector/`, promote shared code
 - [ ] **Phase 7 — Library adapters and CLI** — URL/bytes inputs, CLI, docs
 
@@ -62,6 +62,7 @@ Benchmark all *available* models; "all four" is qualified by these constraints.
 - **D2 (after Phase 4):** owner decides whether MusicDET is dropped, attempted via zero-shot training on our human tracks, or deferred. No agent decides alone.
 - **D2 (recorded 2026-11-19): defer MusicDET** — keep the D1 comparison to the four available candidate model families; revisit only if cross-generator testing becomes a goal. Evidence: `benches/musicdet-feasibility.md`.
 - **D1 (after Phase 5):** owner chooses the default backend from measured results. Phase 6 does not start until D1 is recorded here. D2 does not block Phase 5: the harness compares available backends whether or not MusicDET proceeds, and D1 considers only backends actually benchmarked.
+- **D1 (recorded 2026-11-19): `ast-60s`** — provisional default backend chosen from measured Phase 5 evidence (400 tracks, seed 42, fixed dev/test, 5/5 backends scored 400/400). Rationale: best FPR@~95% recall among available backends (0.45) with solid ROC-AUC (0.858), reducing false flags on human tracks at high sensitivity relative to alternatives, at higher runtime cost (~272s for 400 tracks). Results are directional/conditional (small, genre-skewed, unknown generators, B1 `peak_normalized_to_fit_range` preprocessing, saturated dev calibration/collapsed thresholds). Evidence: `benches/results/calibration.json`, `benches/results/summary.json`, `benches/results/report.md` (raw JSONL git-ignored in `benches/results/raw/`). Phase 6 may proceed.
 
 Record a gate decision as one dated line with the choice; the benchmark report holds the evidence. If the labeled CSV never arrives, record D1 as "pending — harness only" instead of choosing a model.
 
@@ -250,7 +251,7 @@ Generate fixtures in test code with the standard `wave` module; commit no binary
 
 ### Phase 5 — Benchmark harness and report
 
-**Status:** [ ] not started  **Depends on:** Phases 1–3 and Phase 4 findings. The owner-designated benchmark manifest is `test-audio/test-songs.csv` (200 per class); harness work can use synthetic fixtures while other backends are built.
+**Status:** [x] done (2026-11-19; real results generated, D1 recorded: `ast-60s`)  **Depends on:** Phases 1–3 and Phase 4 findings. The owner-designated benchmark manifest is `test-audio/test-songs.csv` (200 per class); harness work can use synthetic fixtures while other backends are built.
 
 **Goal:** one reproducible comparison of all available backends on the owner's labeled set (`test-audio/test-songs.csv`), with calibration and a recommendation.
 
@@ -259,22 +260,26 @@ Generate fixtures in test code with the standard `wave` module; commit no binary
 **Out of scope:** choosing the default model (owner decides), the library, threshold hardening beyond dev data.
 
 **Test-first checklist:**
-- [ ] Splitting is stratified, seeded and leak-free; tests use synthetic labels.
-- [ ] Each metric matches a hand-computed expected value on a tiny synthetic score set.
-- [ ] Temperature scaling improves or leaves unchanged log-loss on a synthetic dev set and never touches test scores.
-- [ ] Exported `calibration.json` contains the fitted temperature and thresholds; missing or degenerate dev scores produce the fixed `0.35 / 0.65` fallback and a warning.
-- [ ] Summary output contains model revisions, versions, config hash, seed and timing.
-- [ ] A failing backend run is recorded and excluded without corrupting the summary.
+- [x] Splitting is stratified, seeded and leak-free; tests use synthetic labels.
+- [x] Each metric matches a hand-computed expected value on a tiny synthetic score set.
+- [x] Temperature scaling improves or leaves unchanged log-loss on a synthetic dev set and never touches test scores.
+- [x] Exported `calibration.json` contains the fitted temperature and thresholds; missing or degenerate dev scores produce the fixed `0.35 / 0.65` fallback and a warning.
+- [x] Summary output contains model revisions, versions, config hash, seed and timing.
+- [x] A failing backend run is recorded and excluded without corrupting the summary.
 
-**Implementation notes:** criteria are fixed before the run; do not change them after seeing results; report negative results; never cherry-pick a seed; raw JSONL stays git-ignored, only the summary/report the owner names is committed.
+**Implementation notes:** criteria are fixed before the run; do not change them after seeing results; report negative results; never cherry-pick a seed; raw JSONL stays git-ignored, only the summary/report the owner names is committed. Owner-approved preprocessing (B1, 2026-11-19): decoded windows with peak magnitude > 1.0 are conditionally peak-normalized by `1/peak` to `[-1.0, 1.0]` with `peak_normalized_to_fit_range` warning (gain adjustment, not clipping); windows already in range unchanged. Results/calibration are conditional on this preprocessing and recorded in README/report limitations.
 
-**Artifacts:** `benches/run_bench.py`, `benches/_shared/eval.py`, tests, `benches/results/calibration.json`, `benches/results/summary.json`, `benches/results/report.md`.
+**Artifacts:** `benches/run_bench.py`, `benches/_shared/eval.py`, `benches/_shared/audio.py`, `benches/_shared/constants.py`, tests, `benches/results/calibration.json`, `benches/results/summary.json`, `benches/results/report.md`.
 
-**Human testing:** run the full benchmark on `test-audio/test-songs.csv`; check the report's limitations section and `calibration.json`; verify a seeded rerun produces the same summary (allow absolute 1e-4 drift for GPU models).
+**Human testing:** full benchmark run on `test-audio/test-songs.csv` (400 tracks, seed 42, fixed dev/test split per eval policy) with all 5 available backends scored 400/400 and 0 decode/validation failures after B1 normalization; artifacts regenerated from raw (`benches/results/raw/*.jsonl`, git-ignored). Report includes normalization/limitations. Seeded rerun equivalence not re-verified on GPU in this pass (GPU inference; earlier reruns showed 0.0 drift in smokes; allow absolute 1e-4 drift).
 
-**Done criteria:** [ ] checklist tests red then green; [ ] CC §2 checks pass; [ ] criteria documented before results; [ ] `calibration.json` written with fitted values or documented fallback; [ ] owner asked for D1 when real results exist (otherwise D1 recorded as pending in section 5).
+**Done criteria:** [x] checklist tests red then green; [x] CC §2 checks pass (`pytest` 122 passed, 2 pre-existing short-track padding warnings; `mypy benches` clean; `ruff check .`/`ruff format --check .` clean); [x] criteria documented before results; [x] `calibration.json` written with fitted values or documented fallback; [x] owner chose D1 and it is recorded in section 5 (`ast-60s`, provisional).
 
-**For later phases:** *(agent fills this in.)*
+**For later phases:**
+- **Phase 6:** per-backend calibration in `benches/results/calibration.json` (and matching `summary.json`/`report.md`) includes `temperature`, `low`, `high`, model id/revision, config hash, and dev metrics from seed 42 fixed dev/test evaluation on 400 tracks (80 dev / 320 test). Dev metrics hit 1.0 ROC/PR AUC for all backends on this split (small/genre-skewed mix), yielding high or saturated fitted temperatures (capped) and often equal low/high thresholds; treat exported thresholds as dev-fitted on this distribution and conditional on B1 peak normalization + documented preprocessing/offsets/windows. Package/apply calibration exactly as scored (`raw_score` handling per backend as in `benches/_shared/eval.py`) and keep the fixed fallback behavior when calibration is absent/degenerate.
+- **Phase 6:** `benches/_shared/eval.py` holds numpy-only split/metrics/temperature-scaling/threshold/export/report logic; `benches/run_bench.py` handles compare/from-raw orchestration and raw row loading/sanitization (`MODEL_KEYS` only). Promote reusable pieces rather than reimplementing. `benches/_shared/audio.py` now performs conditional peak normalization (`peak_normalized_to_fit_range`) as the bench decode/validation behavior for out-of-range decoded windows.
+- **Phase 6/7:** raw per-track rows include `path,label,seed,config_hash,versions,timings,warnings` and score fields when successful; failed rows lack score fields. Library result shapes and calibration application must stay consistent with bench semantics.
+- **D1:** owner chose **`ast-60s`** as the provisional default (recorded in section 5). Evidence summary: `fakeprint` had best test ROC-AUC/PR-AUC (0.923/0.927) but FPR@95% recall 1.0 and higher ECE; `ast-60s` 0.858/0.881 with lowest FPR@95% recall (0.45); SpecTTTra alpha 0.853/0.880, beta 0.811/0.834, gamma 0.694/0.732. All results directional/conditional (small, genre-skewed, unknown generators, B1 preprocessing, saturated dev calibration). Revalidate thresholds/calibration on a more representative set in Phase 6+.
 
 ---
 

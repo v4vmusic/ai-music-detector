@@ -5,6 +5,7 @@ from typing import Final, Literal
 SAMPLE_RATE: Final = 16_000
 MIN_TRACK_SECONDS: Final = 5.0
 WARNING_SHORT_TRACK_PADDED: Final = "short_track_padded"
+WARNING_PEAK_NORMALIZED: Final = "peak_normalized_to_fit_range"
 
 HUMAN_LABEL: Final = "human"
 AI_GENERATED_LABEL: Final = "ai_generated"
@@ -18,6 +19,7 @@ __all__ = [
     "LABELS",
     "MIN_TRACK_SECONDS",
     "SAMPLE_RATE",
+    "WARNING_PEAK_NORMALIZED",
     "WARNING_SHORT_TRACK_PADDED",
     "Label",
 ]

@@ -1,0 +1,188 @@
+{
+  "backends": {
+    "ast-60s": {
+      "config_hash": "26be8796c4333cf66067d29593ce2262c7861cf729e6c2b3d734028d9740ae0b",
+      "dev_metrics": {
+        "ece": 0.03828650461672975,
+        "f1": 1.0,
+        "fpr_at_95_recall": 0.0,
+        "log_loss": 0.039038694521076445,
+        "log_loss_before_temperature": 2.2059515391570375,
+        "pr_auc": 1.0,
+        "roc_auc": 1.0
+      },
+      "failed_tracks": 0,
+      "metrics": {
+        "ece": 0.15686458503328196,
+        "ece_after_temperature": 0.15686458503328196,
+        "f1": 0.7631578947368421,
+        "fpr_at_95_recall": 0.45,
+        "log_loss": 0.5623304531236248,
+        "pr_auc": 0.8809907188917006,
+        "roc_auc": 0.8578125
+      },
+      "model_id": "AI-Music-Detection/ai_music_detection_large_60s",
+      "model_revision": "5e29461bbfc41dc5fe4ed5f7fadc961aa84a7e3e",
+      "ok": true,
+      "scored_tracks": 400,
+      "timings": {
+        "peak_vram_bytes": null,
+        "total_score_seconds": 272.37816348983324
+      },
+      "versions": {
+        "huggingface_hub": "0.36.2",
+        "numpy": "1.26.4",
+        "tokenizers": "0.21.4",
+        "torch": "2.6.0",
+        "transformers": "4.48.3"
+      }
+    },
+    "fakeprint": {
+      "config_hash": "4aadb6053fdf57f3983fe749ab184462ba5bfdee2a63c4fdef2b3e2f10b473df",
+      "dev_metrics": {
+        "ece": 0.03828650461672975,
+        "f1": 1.0,
+        "fpr_at_95_recall": 0.0,
+        "log_loss": 0.039038694521076445,
+        "log_loss_before_temperature": 2.384991978519164,
+        "pr_auc": 1.0,
+        "roc_auc": 1.0
+      },
+      "failed_tracks": 0,
+      "metrics": {
+        "ece": 0.32403749601092063,
+        "ece_after_temperature": 0.32403749601092063,
+        "f1": 0.8767123287671232,
+        "fpr_at_95_recall": 1.0,
+        "log_loss": 0.7955672543243145,
+        "pr_auc": 0.9271101380674099,
+        "roc_auc": 0.923125
+      },
+      "model_id": "lofcz/ai-music-detector",
+      "model_revision": "d2180598fed79e3f917e8050a00439982466e5c6",
+      "ok": true,
+      "scored_tracks": 400,
+      "timings": {
+        "peak_vram_bytes": null,
+        "total_score_seconds": 1.854143775854027
+      },
+      "versions": {
+        "numpy": "1.26.4",
+        "onnxruntime": "1.23.2"
+      }
+    },
+    "spectttra-alpha-120s": {
+      "config_hash": "2e1c68ba5b9096f74da041cd5f6d3b64c666cc72f52252e464177a561074110e",
+      "dev_metrics": {
+        "ece": 7.626404641640112e-05,
+        "f1": 1.0,
+        "fpr_at_95_recall": 0.0,
+        "log_loss": 7.626695466672647e-05,
+        "log_loss_before_temperature": 0.5480753733056842,
+        "pr_auc": 1.0,
+        "roc_auc": 1.0
+      },
+      "failed_tracks": 0,
+      "metrics": {
+        "ece": 0.07033544167746428,
+        "ece_after_temperature": 0.07033544167746428,
+        "f1": 0.8,
+        "fpr_at_95_recall": 0.725,
+        "log_loss": 0.4672049721192296,
+        "pr_auc": 0.8803794193714269,
+        "roc_auc": 0.853125
+      },
+      "model_id": "awsaf49/sonics-spectttra-alpha-120s",
+      "model_revision": "094b32a5545098a71c113f6ae9d5c55310564268",
+      "ok": true,
+      "scored_tracks": 400,
+      "timings": {
+        "peak_vram_bytes": null,
+        "total_score_seconds": 9.446880142946611
+      },
+      "versions": {
+        "huggingface_hub": "0.36.2",
+        "numpy": "1.26.4",
+        "sonics": "0.1.0",
+        "torch": "2.6.0",
+        "torchaudio": "2.6.0"
+      }
+    },
+    "spectttra-beta-120s": {
+      "config_hash": "d9553f67b309aed6266d4e3ae86f1af155f0481095e321486ac5941213a30dd0",
+      "dev_metrics": {
+        "ece": 0.023013444231971478,
+        "f1": 1.0,
+        "fpr_at_95_recall": 0.0,
+        "log_loss": 0.02328238776276634,
+        "log_loss_before_temperature": 1.050164635321425,
+        "pr_auc": 1.0,
+        "roc_auc": 1.0
+      },
+      "failed_tracks": 0,
+      "metrics": {
+        "ece": 0.15047881431305135,
+        "ece_after_temperature": 0.15047881431305135,
+        "f1": 0.7105263157894737,
+        "fpr_at_95_recall": 0.675,
+        "log_loss": 0.5890106616456668,
+        "pr_auc": 0.8344883293258591,
+        "roc_auc": 0.810625
+      },
+      "model_id": "awsaf49/sonics-spectttra-beta-120s",
+      "model_revision": "cc49422a98b5b92700876c608d0f9cdf27214a3e",
+      "ok": true,
+      "scored_tracks": 400,
+      "timings": {
+        "peak_vram_bytes": null,
+        "total_score_seconds": 6.01362772982975
+      },
+      "versions": {
+        "huggingface_hub": "0.36.2",
+        "numpy": "1.26.4",
+        "sonics": "0.1.0",
+        "torch": "2.6.0",
+        "torchaudio": "2.6.0"
+      }
+    },
+    "spectttra-gamma-120s": {
+      "config_hash": "85a9d71164318909bbde4041a0fd15cc5f3f3453eb2856075cdecce9401d4985",
+      "dev_metrics": {
+        "ece": 0.0038418041728636517,
+        "f1": 1.0,
+        "fpr_at_95_recall": 0.0,
+        "log_loss": 0.003849202858127486,
+        "log_loss_before_temperature": 0.788893198076873,
+        "pr_auc": 1.0,
+        "roc_auc": 1.0
+      },
+      "failed_tracks": 0,
+      "metrics": {
+        "ece": 0.09901871343713302,
+        "ece_after_temperature": 0.09901871343713302,
+        "f1": 0.6666666666666666,
+        "fpr_at_95_recall": 0.9,
+        "log_loss": 0.6403759265261,
+        "pr_auc": 0.732172435516212,
+        "roc_auc": 0.694375
+      },
+      "model_id": "awsaf49/sonics-spectttra-gamma-120s",
+      "model_revision": "57659d8cb04767893537bbeb89da973e2e5a0290",
+      "ok": true,
+      "scored_tracks": 400,
+      "timings": {
+        "peak_vram_bytes": null,
+        "total_score_seconds": 5.117734093990293
+      },
+      "versions": {
+        "huggingface_hub": "0.36.2",
+        "numpy": "1.26.4",
+        "sonics": "0.1.0",
+        "torch": "2.6.0",
+        "torchaudio": "2.6.0"
+      }
+    }
+  },
+  "seed": 42,
+  "split_strategy": "fixed_dev_test"
+}

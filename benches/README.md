@@ -30,7 +30,10 @@ track002.wav,ai_generated
 `label` is exactly `human` or `ai_generated`. A relative `path` is resolved against the
 directory containing the manifest. Extra columns are ignored. `http(s)://` rows are skipped
 with a warning; URL fetching is not bench work. Audio under 5 s is rejected; a track shorter
-than the requested window is zero-padded with a `short_track_padded` warning.
+than the requested window is zero-padded with a `short_track_padded` warning. If a decoded
+window's peak magnitude exceeds 1.0, samples are conditionally peak-normalized by `1/peak`
+(preserving waveform shape, no clipping) to fit `[-1.0, 1.0]` and a
+`peak_normalized_to_fit_range` warning is emitted; windows already within range are unchanged.
 
 ## Decode one file
 
@@ -50,7 +53,7 @@ Bench scripts are standalone and invoked from the workspace root:
 uv run python benches/<name>.py --manifest <csv> --out <dir>
 ```
 
-The first runner is `benches/run_bench.py`:
+### Score one backend
 
 ```bash
 uv run python benches/run_bench.py \
@@ -71,10 +74,47 @@ is wall time and `gpu_seconds` is `null` for this CPU backend. A failed decode p
 with `warnings`, `error`, `seed`, `config_hash` and `versions` but no score fields, and the run
 continues.
 
+### Compare all available backends
+
+To score all available backends, write raw per-backend JSONL into `benches/results/raw/`, and
+produce `calibration.json`, `summary.json` and `report.md` in `benches/results/`:
+
+```bash
+uv run python benches/run_bench.py \
+  --compare \
+  --manifest test-audio/test-songs.csv \
+  --results-dir benches/results \
+  --seed 42 \
+  --device cuda
+```
+
+Run GPU backends one variant at a time in separate processes when scoring individually; the
+`--compare` runner loads and unloads backends sequentially and records a failing backend run in
+the summary without corrupting other backends' results.
+
+To evaluate from existing raw JSONL results without running models (each file must be named
+`<backend-key>.jsonl`, e.g. `benches/results/raw/fakeprint.jsonl`):
+
+```bash
+uv run python benches/run_bench.py \
+  --compare \
+  --manifest test-audio/test-songs.csv \
+  --results-dir benches/results \
+  --from-raw benches/results/raw \
+  --seed 42
+```
+
+`--folds <k>` sets k for stratified k-fold when fewer than ~50 samples per class are available
+(default: 5). With at least ~50 per class, a fixed seeded dev/test split is used. Calibration
+(temperature scaling and low/high thresholds) is fitted on dev data only; metrics are reported on
+held-out/test data. If calibration is degenerate or dev data is unavailable, thresholds fall back
+to `0.35 / 0.65` with a warning in `calibration.json`.
+
 Fakeprint weights are pinned by revision and SHA-256 in `benches/_shared/registry.py`. They are
 downloaded once into `AIDETECT_CACHE_DIR` (default: the Hugging Face cache) and never committed.
 Rerun with the same `--seed` and manifest to reproduce scores exactly; the `config_hash` records
-the model metadata, seed and package versions.
+the model metadata, seed and package versions. CPU reruns should match exactly; for GPU models
+allow a small absolute tolerance (1e-4) and record larger drift.
 
 ## SpecTTTra backends (GPU)
 

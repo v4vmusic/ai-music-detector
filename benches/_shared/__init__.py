@@ -7,6 +7,7 @@ from benches._shared.constants import (
     LABELS,
     MIN_TRACK_SECONDS,
     SAMPLE_RATE,
+    WARNING_PEAK_NORMALIZED,
     WARNING_SHORT_TRACK_PADDED,
     Label,
 )
@@ -35,6 +36,7 @@ __all__ = [
     "MODEL_KEY_FAKEPRINT",
     "MODEL_KEYS",
     "SAMPLE_RATE",
+    "WARNING_PEAK_NORMALIZED",
     "WARNING_SHORT_TRACK_PADDED",
     "AidetectError",
     "AudioDecodeError",

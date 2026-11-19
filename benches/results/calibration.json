@@ -1,0 +1,96 @@
+{
+  "models": {
+    "ast-60s": {
+      "config_hash": "26be8796c4333cf66067d29593ce2262c7861cf729e6c2b3d734028d9740ae0b",
+      "dev_metrics": {
+        "ece": 0.03828650461672975,
+        "f1": 1.0,
+        "fpr_at_95_recall": 0.0,
+        "log_loss": 0.039038694521076445,
+        "log_loss_before_temperature": 2.2059515391570375,
+        "pr_auc": 1.0,
+        "roc_auc": 1.0
+      },
+      "high_threshold": 0.8458905146738921,
+      "low_threshold": 0.8458905146738921,
+      "model_id": "AI-Music-Detection/ai_music_detection_large_60s",
+      "model_revision": "5e29461bbfc41dc5fe4ed5f7fadc961aa84a7e3e",
+      "temperature": 5.0,
+      "warnings": []
+    },
+    "fakeprint": {
+      "config_hash": "4aadb6053fdf57f3983fe749ab184462ba5bfdee2a63c4fdef2b3e2f10b473df",
+      "dev_metrics": {
+        "ece": 0.03828650461672975,
+        "f1": 1.0,
+        "fpr_at_95_recall": 0.0,
+        "log_loss": 0.039038694521076445,
+        "log_loss_before_temperature": 2.384991978519164,
+        "pr_auc": 1.0,
+        "roc_auc": 1.0
+      },
+      "high_threshold": 0.07959758536640082,
+      "low_threshold": 0.07959758536640082,
+      "model_id": "lofcz/ai-music-detector",
+      "model_revision": "d2180598fed79e3f917e8050a00439982466e5c6",
+      "temperature": 5.0,
+      "warnings": []
+    },
+    "spectttra-alpha-120s": {
+      "config_hash": "2e1c68ba5b9096f74da041cd5f6d3b64c666cc72f52252e464177a561074110e",
+      "dev_metrics": {
+        "ece": 7.626404641640112e-05,
+        "f1": 1.0,
+        "fpr_at_95_recall": 0.0,
+        "log_loss": 7.626695466672647e-05,
+        "log_loss_before_temperature": 0.5480753733056842,
+        "pr_auc": 1.0,
+        "roc_auc": 1.0
+      },
+      "high_threshold": 0.3811434328992681,
+      "low_threshold": 0.3811434328992681,
+      "model_id": "awsaf49/sonics-spectttra-alpha-120s",
+      "model_revision": "094b32a5545098a71c113f6ae9d5c55310564268",
+      "temperature": 1.7000000000000002,
+      "warnings": []
+    },
+    "spectttra-beta-120s": {
+      "config_hash": "d9553f67b309aed6266d4e3ae86f1af155f0481095e321486ac5941213a30dd0",
+      "dev_metrics": {
+        "ece": 0.023013444231971478,
+        "f1": 1.0,
+        "fpr_at_95_recall": 0.0,
+        "log_loss": 0.02328238776276634,
+        "log_loss_before_temperature": 1.050164635321425,
+        "pr_auc": 1.0,
+        "roc_auc": 1.0
+      },
+      "high_threshold": 0.35055614819602887,
+      "low_threshold": 0.35055614819602887,
+      "model_id": "awsaf49/sonics-spectttra-beta-120s",
+      "model_revision": "cc49422a98b5b92700876c608d0f9cdf27214a3e",
+      "temperature": 4.3,
+      "warnings": []
+    },
+    "spectttra-gamma-120s": {
+      "config_hash": "85a9d71164318909bbde4041a0fd15cc5f3f3453eb2856075cdecce9401d4985",
+      "dev_metrics": {
+        "ece": 0.0038418041728636517,
+        "f1": 1.0,
+        "fpr_at_95_recall": 0.0,
+        "log_loss": 0.003849202858127486,
+        "log_loss_before_temperature": 0.788893198076873,
+        "pr_auc": 1.0,
+        "roc_auc": 1.0
+      },
+      "high_threshold": 0.4426170976924462,
+      "low_threshold": 0.4426170976924462,
+      "model_id": "awsaf49/sonics-spectttra-gamma-120s",
+      "model_revision": "57659d8cb04767893537bbeb89da973e2e5a0290",
+      "temperature": 2.9,
+      "warnings": []
+    }
+  },
+  "seed": 42,
+  "split_strategy": "fixed_dev_test"
+}

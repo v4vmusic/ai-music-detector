@@ -9,7 +9,12 @@ from typing import cast
 import numpy as np
 from numpy.typing import NDArray
 
-from benches._shared.constants import MIN_TRACK_SECONDS, SAMPLE_RATE, WARNING_SHORT_TRACK_PADDED
+from benches._shared.constants import (
+    MIN_TRACK_SECONDS,
+    SAMPLE_RATE,
+    WARNING_PEAK_NORMALIZED,
+    WARNING_SHORT_TRACK_PADDED,
+)
 from benches._shared.errors import AudioDecodeError
 from benches._shared.types import AudioWindow
 
@@ -82,6 +87,19 @@ def decode_window(
         warnings.warn(
             f"Track {audio_path} cannot fill the {window_seconds:g} s window at "
             f"offset {offset_seconds:g} s ({WARNING_SHORT_TRACK_PADDED}); zero-padded",
+            UserWarning,
+            stacklevel=2,
+        )
+
+    peak = float(np.max(np.abs(window))) if window.size else 0.0
+    if peak > 1.0:
+        scale = np.float32(peak)
+        window = (window / scale).astype(np.float32, copy=False)
+        window_warnings = (*window_warnings, WARNING_PEAK_NORMALIZED)
+        warnings.warn(
+            f"Track {audio_path} peak {peak:.6g} exceeds 1.0 in the "
+            f"{window_seconds:g} s window at offset {offset_seconds:g} s "
+            f"({WARNING_PEAK_NORMALIZED}); peak-normalized to [-1, 1]",
             UserWarning,
             stacklevel=2,
         )
