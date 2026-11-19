@@ -1,0 +1,183 @@
+{
+  "backend": "fakeprint",
+  "criterion": {
+    "acceptable_recall_band": [
+      0.8,
+      0.9
+    ],
+    "comparison": "compare loop-fill against dev-selected zero-pad placement using same goal-aligned framework",
+    "note": "FPR-at-target-recall is invariant to monotonic temperature scaling; raw scores are used.",
+    "primary": "minimize human FPR at AI recall 0.85, computed on dev only (raw scores)",
+    "selection_data": "dev only; held-out test reported once per selected config",
+    "target_recall": 0.85,
+    "tie_breaks": [
+      "larger separation margin (decision threshold minus highest human score) on dev",
+      "higher dev ROC-AUC",
+      "config name ascending"
+    ]
+  },
+  "expected_rows": 400,
+  "loop_fill": {
+    "complete": true,
+    "config_hash": "286cf611671480e5df38ca3aa7c59ea4d09a9f931aeb3ad670540076c88637bf",
+    "config_name": "FP-2a",
+    "dev_criterion": {
+      "ai_recall": 0.85,
+      "human_fpr": 0.0,
+      "roc_auc": 0.97474609375,
+      "separation_margin": 3.904104232788086e-05,
+      "target_recall": 0.85,
+      "threshold": 4.139542579650879e-05
+    },
+    "dev_metrics": {
+      "ece": 0.03828650461672975,
+      "f1": 1.0,
+      "fpr_at_95_recall": 0.0,
+      "log_loss": 0.039038694521076445,
+      "log_loss_before_temperature": 2.3354321158714333,
+      "pr_auc": 1.0,
+      "roc_auc": 1.0
+    },
+    "failed_tracks": 0,
+    "fill_diagnostics": {
+      "loop_filled_by_label": {
+        "ai_generated": 0,
+        "human": 0
+      },
+      "loop_filled_tracks": 0
+    },
+    "fill_mode": "loop-fill",
+    "identifiers_ok": true,
+    "model_id": "lofcz/ai-music-detector",
+    "model_revision": "d2180598fed79e3f917e8050a00439982466e5c6",
+    "operating_point_diagnostics": {
+      "example_false_negative_paths": [
+        "cme2gz00c06skli1xtuh5g99y.mp3",
+        "cme2gdf3n00l6li1xcv7nz0y4.mp3",
+        "cmrdoov9h02f6od0iem3epbs2.mp3",
+        "cme2gifcg03y7li1x3x6i3nfr.mp3",
+        "cmsenphqf04lvod0i228sx1ji.mp3"
+      ],
+      "example_false_positive_paths": [],
+      "test_ai_false_negatives": 5,
+      "test_human_false_positives": 0,
+      "threshold_raw_score": 4.139542579650879e-05
+    },
+    "placement": "middle",
+    "rows": 400,
+    "score_distribution_by_label": {
+      "ai_generated": {
+        "count": 200,
+        "max": 0.9999961853027344,
+        "median": 0.04917280375957489,
+        "min": 0.0
+      },
+      "human": {
+        "count": 200,
+        "max": 6.556510925292969e-06,
+        "median": 0.0,
+        "min": 0.0
+      }
+    },
+    "scored_tracks": 400,
+    "test_metrics": {
+      "ece": 0.285713386641678,
+      "ece_after_temperature": 0.285713386641678,
+      "f1": 0.9090909090909091,
+      "fpr_at_95_recall": 0.15,
+      "log_loss": 0.6332637893446547,
+      "pr_auc": 0.9756392467691427,
+      "roc_auc": 0.9646875
+    },
+    "warning_counts": {
+      "loop_filled": 0,
+      "peak_normalized_to_fit_range": 246,
+      "short_track_padded": 0
+    }
+  },
+  "loop_fill_config": "FP-2a",
+  "note": "Fakeprint window is 10s; no tracks in this manifest have a selected segment shorter than 10s, so loop-fill has no affected tracks and is expected to be a no-op. Included for methodological completeness.",
+  "placement": "middle",
+  "seed": 42,
+  "selected_zero_pad_config": "FP-1b",
+  "split_strategy": "fixed_dev_test",
+  "zero_pad": {
+    "complete": true,
+    "config_hash": "ee1323c5e8da3832e3fa4c82bdfcd6a39db524731220173e89a3a7124d6d857a",
+    "config_name": "FP-1b",
+    "dev_criterion": {
+      "ai_recall": 0.85,
+      "human_fpr": 0.0,
+      "roc_auc": 0.97474609375,
+      "separation_margin": 3.904104232788086e-05,
+      "target_recall": 0.85,
+      "threshold": 4.139542579650879e-05
+    },
+    "dev_metrics": {
+      "ece": 0.03828650461672975,
+      "f1": 1.0,
+      "fpr_at_95_recall": 0.0,
+      "log_loss": 0.039038694521076445,
+      "log_loss_before_temperature": 2.3354321158714333,
+      "pr_auc": 1.0,
+      "roc_auc": 1.0
+    },
+    "dev_rank": 1,
+    "failed_tracks": 0,
+    "fill_diagnostics": {
+      "loop_filled_by_label": {
+        "ai_generated": 0,
+        "human": 0
+      },
+      "loop_filled_tracks": 0
+    },
+    "fill_mode": "zero-pad",
+    "identifiers_ok": true,
+    "model_id": "lofcz/ai-music-detector",
+    "model_revision": "d2180598fed79e3f917e8050a00439982466e5c6",
+    "operating_point_diagnostics": {
+      "example_false_negative_paths": [
+        "cme2gz00c06skli1xtuh5g99y.mp3",
+        "cme2gdf3n00l6li1xcv7nz0y4.mp3",
+        "cmrdoov9h02f6od0iem3epbs2.mp3",
+        "cme2gifcg03y7li1x3x6i3nfr.mp3",
+        "cmsenphqf04lvod0i228sx1ji.mp3"
+      ],
+      "example_false_positive_paths": [],
+      "test_ai_false_negatives": 5,
+      "test_human_false_positives": 0,
+      "threshold_raw_score": 4.139542579650879e-05
+    },
+    "placement": "middle",
+    "rows": 400,
+    "score_distribution_by_label": {
+      "ai_generated": {
+        "count": 200,
+        "max": 0.9999961853027344,
+        "median": 0.04917280375957489,
+        "min": 0.0
+      },
+      "human": {
+        "count": 200,
+        "max": 6.556510925292969e-06,
+        "median": 0.0,
+        "min": 0.0
+      }
+    },
+    "scored_tracks": 400,
+    "test_metrics": {
+      "ece": 0.285713386641678,
+      "ece_after_temperature": 0.285713386641678,
+      "f1": 0.9090909090909091,
+      "fpr_at_95_recall": 0.15,
+      "log_loss": 0.6332637893446547,
+      "pr_auc": 0.9756392467691427,
+      "roc_auc": 0.9646875
+    },
+    "warning_counts": {
+      "loop_filled": 0,
+      "peak_normalized_to_fit_range": 246,
+      "short_track_padded": 0
+    }
+  }
+}

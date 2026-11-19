@@ -1,0 +1,358 @@
+{
+  "backend": "fakeprint",
+  "configs": {
+    "FP-1a": {
+      "complete": true,
+      "config_hash": "47f9803974a263395e2b8e1ec0d01d8c52654c5e286a03a8d579f19a8662d044",
+      "config_name": "FP-1a",
+      "dev_criterion": {
+        "ai_recall": 0.85,
+        "human_fpr": 0.00625,
+        "roc_auc": 0.9683203125,
+        "separation_margin": -0.9474964141845703,
+        "target_recall": 0.85,
+        "threshold": 6.562471389770508e-05
+      },
+      "dev_metrics": {
+        "ece": 0.03828650461672975,
+        "f1": 1.0,
+        "fpr_at_95_recall": 0.0,
+        "log_loss": 0.039038694521076445,
+        "log_loss_before_temperature": 2.384991978519164,
+        "pr_auc": 1.0,
+        "roc_auc": 1.0
+      },
+      "dev_rank": 2,
+      "failed_tracks": 0,
+      "fill_diagnostics": {
+        "loop_filled_by_label": {
+          "ai_generated": 0,
+          "human": 0
+        },
+        "loop_filled_tracks": 0
+      },
+      "fill_mode": "zero-pad",
+      "identifiers_ok": true,
+      "model_id": "lofcz/ai-music-detector",
+      "model_revision": "d2180598fed79e3f917e8050a00439982466e5c6",
+      "operating_point_diagnostics": {
+        "example_false_negative_paths": [
+          "cme2gz00c06skli1xtuh5g99y.mp3",
+          "cme2m6eud0fl0li1x5p6w0y1j.mp3",
+          "cmrdoov9h02f6od0iem3epbs2.mp3",
+          "cme2gifcg03y7li1x3x6i3nfr.mp3",
+          "cmlupmg4e6k3hod0if0uex813.mp3",
+          "cmsenphqf04lvod0i228sx1ji.mp3",
+          "cme2k3nu00cduli1x84e53tap.mp3",
+          "cmrunjlft004sod0i6wtnpjx2.mp3"
+        ],
+        "example_false_positive_paths": [
+          "cme2gghmg031kli1xyl4zzpb8.mp3"
+        ],
+        "test_ai_false_negatives": 8,
+        "test_human_false_positives": 1,
+        "threshold_raw_score": 6.562471389770508e-05
+      },
+      "placement": "start",
+      "rows": 400,
+      "score_distribution_by_label": {
+        "ai_generated": {
+          "count": 200,
+          "max": 0.9999991655349731,
+          "median": 0.019466891884803772,
+          "min": 0.0
+        },
+        "human": {
+          "count": 200,
+          "max": 0.947562038898468,
+          "median": 0.0,
+          "min": 0.0
+        }
+      },
+      "scored_tracks": 400,
+      "test_metrics": {
+        "ece": 0.32403749601092063,
+        "ece_after_temperature": 0.32403749601092063,
+        "f1": 0.8767123287671232,
+        "fpr_at_95_recall": 1.0,
+        "log_loss": 0.7955672543243145,
+        "pr_auc": 0.9271101380674099,
+        "roc_auc": 0.923125
+      },
+      "warning_counts": {
+        "loop_filled": 0,
+        "peak_normalized_to_fit_range": 157,
+        "short_track_padded": 0
+      }
+    },
+    "FP-1b": {
+      "complete": true,
+      "config_hash": "ee1323c5e8da3832e3fa4c82bdfcd6a39db524731220173e89a3a7124d6d857a",
+      "config_name": "FP-1b",
+      "dev_criterion": {
+        "ai_recall": 0.85,
+        "human_fpr": 0.0,
+        "roc_auc": 0.97474609375,
+        "separation_margin": 3.904104232788086e-05,
+        "target_recall": 0.85,
+        "threshold": 4.139542579650879e-05
+      },
+      "dev_metrics": {
+        "ece": 0.03828650461672975,
+        "f1": 1.0,
+        "fpr_at_95_recall": 0.0,
+        "log_loss": 0.039038694521076445,
+        "log_loss_before_temperature": 2.3354321158714333,
+        "pr_auc": 1.0,
+        "roc_auc": 1.0
+      },
+      "dev_rank": 1,
+      "failed_tracks": 0,
+      "fill_diagnostics": {
+        "loop_filled_by_label": {
+          "ai_generated": 0,
+          "human": 0
+        },
+        "loop_filled_tracks": 0
+      },
+      "fill_mode": "zero-pad",
+      "identifiers_ok": true,
+      "model_id": "lofcz/ai-music-detector",
+      "model_revision": "d2180598fed79e3f917e8050a00439982466e5c6",
+      "operating_point_diagnostics": {
+        "example_false_negative_paths": [
+          "cme2gz00c06skli1xtuh5g99y.mp3",
+          "cme2gdf3n00l6li1xcv7nz0y4.mp3",
+          "cmrdoov9h02f6od0iem3epbs2.mp3",
+          "cme2gifcg03y7li1x3x6i3nfr.mp3",
+          "cmsenphqf04lvod0i228sx1ji.mp3"
+        ],
+        "example_false_positive_paths": [],
+        "test_ai_false_negatives": 5,
+        "test_human_false_positives": 0,
+        "threshold_raw_score": 4.139542579650879e-05
+      },
+      "placement": "middle",
+      "rows": 400,
+      "score_distribution_by_label": {
+        "ai_generated": {
+          "count": 200,
+          "max": 0.9999961853027344,
+          "median": 0.04917280375957489,
+          "min": 0.0
+        },
+        "human": {
+          "count": 200,
+          "max": 6.556510925292969e-06,
+          "median": 0.0,
+          "min": 0.0
+        }
+      },
+      "scored_tracks": 400,
+      "test_metrics": {
+        "ece": 0.285713386641678,
+        "ece_after_temperature": 0.285713386641678,
+        "f1": 0.9090909090909091,
+        "fpr_at_95_recall": 0.15,
+        "log_loss": 0.6332637893446547,
+        "pr_auc": 0.9756392467691427,
+        "roc_auc": 0.9646875
+      },
+      "warning_counts": {
+        "loop_filled": 0,
+        "peak_normalized_to_fit_range": 246,
+        "short_track_padded": 0
+      }
+    },
+    "FP-1c": {
+      "complete": true,
+      "config_hash": "722a64ca7a7e4c01a5a2c60d9c9a59dad2f0e627c021b67790cc094859873f17",
+      "config_name": "FP-1c",
+      "dev_criterion": {
+        "ai_recall": 0.85,
+        "human_fpr": 0.10625,
+        "roc_auc": 0.912109375,
+        "separation_margin": -0.9988990426063538,
+        "target_recall": 0.85,
+        "threshold": 0.0005933046340942383
+      },
+      "dev_metrics": {
+        "ece": 0.03828650461672975,
+        "f1": 1.0,
+        "fpr_at_95_recall": 0.0,
+        "log_loss": 0.039038694521076445,
+        "log_loss_before_temperature": 1.7245981572839404,
+        "pr_auc": 1.0,
+        "roc_auc": 1.0
+      },
+      "dev_rank": 3,
+      "failed_tracks": 0,
+      "fill_diagnostics": {
+        "loop_filled_by_label": {
+          "ai_generated": 0,
+          "human": 0
+        },
+        "loop_filled_tracks": 0
+      },
+      "fill_mode": "zero-pad",
+      "identifiers_ok": true,
+      "model_id": "lofcz/ai-music-detector",
+      "model_revision": "d2180598fed79e3f917e8050a00439982466e5c6",
+      "operating_point_diagnostics": {
+        "example_false_negative_paths": [
+          "cmk3ntian039vod0ikao450jh.mp3",
+          "cme2gdf3n00l6li1xcv7nz0y4.mp3",
+          "cmrdoov9h02f6od0iem3epbs2.mp3",
+          "cme2gifcg03y7li1x3x6i3nfr.mp3",
+          "cmqoohfef032yod0jz3pl50jx.mp3",
+          "cmsenphqf04lvod0i228sx1ji.mp3"
+        ],
+        "example_false_positive_paths": [
+          "cme2gwma706gvli1x2q9vcqwg.mp3",
+          "cme2gnmqb050fli1xwzz41jz3.mp3"
+        ],
+        "test_ai_false_negatives": 6,
+        "test_human_false_positives": 2,
+        "threshold_raw_score": 0.0005933046340942383
+      },
+      "placement": "end",
+      "rows": 400,
+      "score_distribution_by_label": {
+        "ai_generated": {
+          "count": 200,
+          "max": 0.9999998807907104,
+          "median": 0.716234415769577,
+          "min": 0.0
+        },
+        "human": {
+          "count": 200,
+          "max": 0.999492347240448,
+          "median": 0.0,
+          "min": 0.0
+        }
+      },
+      "scored_tracks": 400,
+      "test_metrics": {
+        "ece": 0.2288183237849616,
+        "ece_after_temperature": 0.2288183237849616,
+        "f1": 0.8674698795180723,
+        "fpr_at_95_recall": 0.2,
+        "log_loss": 0.5448949778792722,
+        "pr_auc": 0.9151829765097055,
+        "roc_auc": 0.924375
+      },
+      "warning_counts": {
+        "loop_filled": 0,
+        "peak_normalized_to_fit_range": 166,
+        "short_track_padded": 0
+      }
+    }
+  },
+  "criterion": {
+    "acceptable_recall_band": [
+      0.8,
+      0.9
+    ],
+    "note": "FPR-at-target-recall is invariant to monotonic temperature scaling; raw scores are used.",
+    "primary": "minimize human FPR at AI recall 0.85, computed on dev only (raw scores)",
+    "selection_data": "dev only; held-out test reported once per selected config",
+    "target_recall": 0.85,
+    "tie_breaks": [
+      "larger separation margin (decision threshold minus highest human score) on dev",
+      "higher dev ROC-AUC",
+      "config name ascending"
+    ]
+  },
+  "expected_rows": 400,
+  "note": "Fakeprint (10s window) was not in original T1 scope; analyzed here with same dev-only goal-aligned criterion for v4vmusic RSS spam-filtering use case (minimize human false flags at ~80-90% AI recall).",
+  "phase5_baseline_reference": {
+    "dev_criterion": {
+      "ai_recall": 0.85,
+      "human_fpr": 0.00625,
+      "roc_auc": 0.9683203125,
+      "separation_margin": -0.9474964141845703,
+      "target_recall": 0.85,
+      "threshold": 6.562471389770508e-05
+    },
+    "operating_point_diagnostics": {
+      "example_false_negative_paths": [
+        "cme2gz00c06skli1xtuh5g99y.mp3",
+        "cme2m6eud0fl0li1x5p6w0y1j.mp3",
+        "cmrdoov9h02f6od0iem3epbs2.mp3",
+        "cme2gifcg03y7li1x3x6i3nfr.mp3",
+        "cmlupmg4e6k3hod0if0uex813.mp3",
+        "cmsenphqf04lvod0i228sx1ji.mp3",
+        "cme2k3nu00cduli1x84e53tap.mp3",
+        "cmrunjlft004sod0i6wtnpjx2.mp3"
+      ],
+      "example_false_positive_paths": [
+        "cme2gghmg031kli1xyl4zzpb8.mp3"
+      ],
+      "test_ai_false_negatives": 8,
+      "test_human_false_positives": 1,
+      "threshold_raw_score": 6.562471389770508e-05
+    },
+    "placement_note": "fixed offset 0s (default), equivalent to start for tracks >= 10s",
+    "source": "benches/results/raw/fakeprint.jsonl",
+    "test_metrics": {
+      "ece": 0.32403749601092063,
+      "ece_after_temperature": 0.32403749601092063,
+      "f1": 0.8767123287671232,
+      "fpr_at_95_recall": 1.0,
+      "log_loss": 0.7955672543243145,
+      "pr_auc": 0.9271101380674099,
+      "roc_auc": 0.923125
+    },
+    "warning_counts": {
+      "loop_filled": 0,
+      "peak_normalized_to_fit_range": 157,
+      "short_track_padded": 0
+    }
+  },
+  "seed": 42,
+  "selected": {
+    "config": "FP-1b",
+    "config_hash": "ee1323c5e8da3832e3fa4c82bdfcd6a39db524731220173e89a3a7124d6d857a",
+    "dev_criterion": {
+      "ai_recall": 0.85,
+      "human_fpr": 0.0,
+      "roc_auc": 0.97474609375,
+      "separation_margin": 3.904104232788086e-05,
+      "target_recall": 0.85,
+      "threshold": 4.139542579650879e-05
+    },
+    "dev_metrics": {
+      "ece": 0.03828650461672975,
+      "f1": 1.0,
+      "fpr_at_95_recall": 0.0,
+      "log_loss": 0.039038694521076445,
+      "log_loss_before_temperature": 2.3354321158714333,
+      "pr_auc": 1.0,
+      "roc_auc": 1.0
+    },
+    "operating_point_diagnostics": {
+      "example_false_negative_paths": [
+        "cme2gz00c06skli1xtuh5g99y.mp3",
+        "cme2gdf3n00l6li1xcv7nz0y4.mp3",
+        "cmrdoov9h02f6od0iem3epbs2.mp3",
+        "cme2gifcg03y7li1x3x6i3nfr.mp3",
+        "cmsenphqf04lvod0i228sx1ji.mp3"
+      ],
+      "example_false_positive_paths": [],
+      "test_ai_false_negatives": 5,
+      "test_human_false_positives": 0,
+      "threshold_raw_score": 4.139542579650879e-05
+    },
+    "placement": "middle",
+    "test_metrics": {
+      "ece": 0.285713386641678,
+      "ece_after_temperature": 0.285713386641678,
+      "f1": 0.9090909090909091,
+      "fpr_at_95_recall": 0.15,
+      "log_loss": 0.6332637893446547,
+      "pr_auc": 0.9756392467691427,
+      "roc_auc": 0.9646875
+    }
+  },
+  "split_strategy": "fixed_dev_test"
+}
