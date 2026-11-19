@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import asdict
 from pathlib import Path
 
 import pytest
@@ -111,3 +112,22 @@ def test_score_bytes_rejects_empty_input() -> None:
 def test_backend_names_are_selected_by_config_not_a_string_argument() -> None:
     with pytest.raises(ModelLoadError, match="backend"):
         Detector.from_pretrained(backend="ast")
+
+
+def test_score_url_matches_score_bytes_with_injected_fetcher(
+    tmp_path: Path, write_wav: WriteWav
+) -> None:
+    payload = write_wav(tmp_path / "ten.wav", 10.0).read_bytes()
+    urls: list[str] = []
+
+    def fetch(url: str) -> bytes:
+        urls.append(url)
+        return payload
+
+    from_url = Detector.from_pretrained(backend=FixedScorer(0.2, 0.2)).score_url(
+        "https://example.com/track.mp3", fetcher=fetch
+    )
+    from_bytes = Detector.from_pretrained(backend=FixedScorer(0.2, 0.2)).score_bytes(payload)
+
+    assert urls == ["https://example.com/track.mp3"]
+    assert asdict(from_url) == asdict(from_bytes)

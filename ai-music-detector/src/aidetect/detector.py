@@ -24,6 +24,7 @@ from aidetect.config import (
 )
 from aidetect.errors import ModelLoadError
 from aidetect.types import AudioWindow, CascadeResult, ModelOutput, Result
+from aidetect.url import AudioFetcher, fetch_audio_bytes
 
 __all__ = ["CascadeDetector", "Detector", "Scorer"]
 
@@ -155,6 +156,15 @@ class Detector:
         )
         return self._score_window(window)
 
+    def score_url(self, url: str, *, fetcher: AudioFetcher | None = None) -> Result:
+        """Fetch remote audio safely, then produce the same result as :meth:`score_bytes`.
+
+        An injected ``fetcher`` must enforce the URL/size/audio contract; the default does.
+        """
+
+        fetch = fetcher if fetcher is not None else fetch_audio_bytes
+        return self.score_bytes(fetch(url))
+
     def _score_window(self, window: AudioWindow) -> Result:
         output = self._backend.score(window)
         probability = temperature_scale_scores(
@@ -247,6 +257,12 @@ class CascadeDetector:
             )
         second_result = self.second_opinion.score_bytes(data)
         return self._combine(primary_result, second_result)
+
+    def score_url(self, url: str, *, fetcher: AudioFetcher | None = None) -> CascadeResult:
+        """Run the conservative cascade on one safely fetched remote audio source."""
+
+        fetch = fetcher if fetcher is not None else fetch_audio_bytes
+        return self.score_bytes(fetch(url))
 
     def _combine(self, primary_result: Result, second_result: Result) -> CascadeResult:
         flagged = second_result.raw_score >= self.second_opinion.flag_threshold

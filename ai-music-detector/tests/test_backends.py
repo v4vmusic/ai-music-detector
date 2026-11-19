@@ -10,6 +10,7 @@ import numpy as np
 import pytest
 from numpy.typing import NDArray
 
+from aidetect.backends import loaders
 from aidetect.backends.ast import ai_probability
 from aidetect.backends.ast import load as load_ast
 from aidetect.backends.fakeprint import extract_fakeprint
@@ -211,3 +212,14 @@ def test_loader_honours_injected_cache_dir() -> None:
     assert calls == [
         (str(SPECTTRA_SPECS[MODEL_KEY_SPECTTRA_ALPHA]), Path("/tmp/aidetect-cache"), "cpu")
     ]
+
+
+def test_cache_dir_honours_environment_override(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    override = tmp_path / "weights"
+    monkeypatch.setenv("AIDETECT_CACHE_DIR", str(override))
+    assert loaders.cache_dir() == override
+
+    monkeypatch.delenv("AIDETECT_CACHE_DIR", raising=False)
+    assert loaders.cache_dir() == Path.home() / ".cache" / "huggingface" / "hub"

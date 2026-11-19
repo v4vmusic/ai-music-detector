@@ -6,7 +6,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from aidetect.audio import decode_window, decode_window_bytes
+from aidetect.audio import decode_window, decode_window_bytes, is_audio_payload
 from aidetect.constants import (
     WARNING_LOOP_FILLED,
     WARNING_PEAK_NORMALIZED,
@@ -132,3 +132,29 @@ def test_decode_pcm_rejects_incomplete_float_samples(
     audio.write_bytes(b"placeholder")
     with pytest.raises(AudioDecodeError, match="incomplete"):
         decode_window(audio, window_seconds=3.0)
+
+
+def test_is_audio_payload_accepts_common_containers(tmp_path: Path, write_wav: WriteWav) -> None:
+    assert is_audio_payload(write_wav(tmp_path / "track.wav", 0.2).read_bytes())
+    assert is_audio_payload(b"ID3\x04\x00\x00\x00\x00\x00\x00payload")
+    assert is_audio_payload(b"\xff\xfb\x90\x64payload")
+    assert is_audio_payload(b"OggS\x00\x02payload")
+    assert is_audio_payload(b"fLaCpayload")
+    assert is_audio_payload(b"\x00\x00\x00\x18ftypM4A payload")
+    assert is_audio_payload(b"\xff\xf1\x50\x80payload")
+    assert is_audio_payload(b"\x1a\x45\xdf\xa3payload")
+    assert is_audio_payload(b"FORM\x00\x00\x00\x0cAIFFpayload")
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        b"",
+        b"this is not audio\n",
+        b"<html><body>login</body></html>",
+        b'{"error": "not found"}',
+        b"RIFF\x00\x00\x00\x00JUNKnot-wave",
+    ],
+)
+def test_is_audio_payload_rejects_non_audio(payload: bytes) -> None:
+    assert not is_audio_payload(payload)

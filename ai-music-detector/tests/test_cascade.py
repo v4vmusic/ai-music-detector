@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import asdict
 from pathlib import Path
 
 from aidetect.constants import AI_GENERATED_LABEL, HUMAN_LABEL, UNCERTAIN_LABEL
@@ -58,3 +59,21 @@ def test_cascade_score_bytes_matches_score_file(tmp_path: Path, write_wav: Write
     from_file = _detector(0.0, 10.0).score_file(audio)
     from_bytes = _detector(0.0, 10.0).score_bytes(audio.read_bytes())
     assert from_file.label == from_bytes.label == UNCERTAIN_LABEL
+
+
+def test_cascade_score_url_fetches_once_and_matches_bytes(
+    tmp_path: Path, write_wav: WriteWav
+) -> None:
+    payload = write_wav(tmp_path / "ten.wav", 10.0).read_bytes()
+    urls: list[str] = []
+
+    def fetch(url: str) -> bytes:
+        urls.append(url)
+        return payload
+
+    from_url = _detector(0.0, 10.0).score_url("https://example.com/track.mp3", fetcher=fetch)
+    from_bytes = _detector(0.0, 10.0).score_bytes(payload)
+
+    assert urls == ["https://example.com/track.mp3"]
+    assert asdict(from_url) == asdict(from_bytes)
+    assert from_url.label == UNCERTAIN_LABEL

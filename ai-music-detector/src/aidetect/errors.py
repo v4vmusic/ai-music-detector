@@ -1,6 +1,12 @@
 from __future__ import annotations
 
-__all__ = ["AidetectError", "AudioDecodeError", "InvalidManifestError", "ModelLoadError"]
+__all__ = [
+    "AidetectError",
+    "AudioDecodeError",
+    "InvalidManifestError",
+    "ModelLoadError",
+    "NetworkAudioError",
+]
 
 
 class AidetectError(Exception):
@@ -17,3 +23,7 @@ class InvalidManifestError(AidetectError):
 
 class ModelLoadError(AidetectError):
     """A model session, weights or config do not satisfy the backend contract."""
+
+
+class NetworkAudioError(AidetectError):
+    """A remote audio source is unsafe, unreachable or not usable audio."""

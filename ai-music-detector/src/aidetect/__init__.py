@@ -23,7 +23,7 @@ from aidetect.constants import (
     TriStateLabel,
 )
 from aidetect.detector import CascadeDetector, Detector
-from aidetect.errors import AidetectError, AudioDecodeError, ModelLoadError
+from aidetect.errors import AidetectError, AudioDecodeError, ModelLoadError, NetworkAudioError
 from aidetect.types import CascadeResult, Result, Timings
 
 __all__ = [
@@ -38,6 +38,7 @@ __all__ = [
     "Detector",
     "HUMAN_LABEL",
     "ModelLoadError",
+    "NetworkAudioError",
     "Placement",
     "Result",
     "SECOND_OPINION_CONFIG_NAME",

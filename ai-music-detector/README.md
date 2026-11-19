@@ -1,9 +1,9 @@
 # aidetect
 
 `aidetect` is the library half of this workspace. It provides calibrated, tri-state
-AI-generated music detection over local audio files or in-memory audio bytes. The benchmark
-harness lives in [`benches/`](../benches/README.md); this package promotes its shared helpers
-and backends rather than reimplementing them.
+AI-generated music detection over local audio files, in-memory audio bytes or http(s) URLs. The
+benchmark harness lives in [`benches/`](../benches/README.md); this package promotes its shared
+helpers and backends rather than reimplementing them.
 
 ## Install and import
 
@@ -29,12 +29,39 @@ result = detector.score_file("track.mp3")
 print(result.label, result.probability, result.window, result.placement)
 ```
 
-`score_bytes(data)` produces the same shape from in-memory audio. `score_url()` is deliberately
-not part of Phase 6; it is planned for the adapter phase.
+All three input adapters return the same `Result` shape:
+
+```python
+result = detector.score_bytes(audio_bytes)  # in-memory audio
+result = detector.score_url("https://example.com/track.mp3")  # safe remote fetch
+```
 
 The result includes `raw_score`, calibrated `probability`, the tri-state `label`
 (`human`, `uncertain`, `ai_generated`), pinned model id/revision, window description, placement,
 warnings and timings.
+
+## CLI
+
+The console script takes one local path or http(s) URL. Diagnostics and errors go to stderr;
+stdout stays machine-readable:
+
+```bash
+uv run aidetect score track.mp3 --json
+uv run aidetect score https://example.com/track.mp3 --json
+uv run aidetect score track.mp3 --cascade --json   # D1 two-stage conservative policy
+```
+
+`aidetect --help` and `aidetect score --help` list every flag with examples.
+
+- `--json` writes exactly one JSON object (the serialized `Result` or `CascadeResult`) and a
+  trailing newline to stdout. Without it, stdout is one short `label<TAB>probability=...` line.
+- Decode warnings (for example `short_track_padded`) are written to stderr as diagnostics and
+  are also present in the result's `warnings` array.
+- Expected failures (`AidetectError`, invalid values, I/O errors) write `aidetect: <message>` to
+  stderr and exit with status 1; stdout stays empty. Argument errors use argparse's status 2.
+- `--cascade` keeps D1 semantics: only stage one can auto-label `ai_generated`; a stage-two flag
+  routes the track to `uncertain`. Its JSON has nested `primary` and (unless stage one flagged)
+  `second_opinion` results instead of a top-level `probability`.
 
 ## Conservative two-stage policy
 
@@ -58,6 +85,8 @@ STA-1b on a middle 120 s window for tracks stage 1 did not flag: a stage-2 flag 
 a track `ai_generated` because either model alone flagged it. `CascadeResult` records both
 stage results (except that a stage-1 auto-AI result has no second-opinion stage).
 
+`cascade.score_url(url)` fetches the bytes once and runs both stages on that same audio.
+
 ## Packaged configuration
 
 - `FP-1b` — default primary: `fakeprint`, 10 s middle window, zero-pad, CPU/ONNX.
@@ -68,6 +97,39 @@ Temperature, low/high tri-state thresholds and raw flag cutoffs are packaged in
 `aidetect/resources/calibration.json` and `aidetect/resources/tuning.json`. If calibration is
 missing or degenerate, the library uses fixed `0.35 / 0.65` thresholds with a warning.
 
+## URL safety
+
+`score_url` and `score ... <url>` apply these defaults before any audio decoding:
+
+- Only `http`/`https` schemes; missing hosts, bad ports and unresolvable or private, loopback,
+  link-local, reserved, multicast, unspecified and IPv4-mapped special addresses are rejected
+  with `NetworkAudioError`.
+- Redirects (maximum 5) are validated hop by hop, including relative `Location` values.
+  Proxies are disabled so the connection uses the validated address.
+- Connect/read timeout: 15 s per request. Responses are capped at 80 MiB (`Content-Length` is
+  checked early; streamed bytes are capped regardless).
+- Downloaded bytes must match a known audio container/frame signature before ffmpeg runs;
+  ffmpeg then performs the real decode/validation. Non-audio payloads raise `NetworkAudioError`.
+- `Detector.score_url(..., fetcher=...)` accepts an injected fetcher for offline tests; a custom
+  fetcher must enforce the same contract.
+
+Bench manifests still use local paths only and skip URL rows with a warning (CC §6); URL fetching
+is a library adapter, not bench behaviour.
+
+## Cache configuration
+
+Model weights are cached on first use under `AIDETECT_CACHE_DIR` when set, otherwise under the
+default Hugging Face cache:
+
+```bash
+export AIDETECT_CACHE_DIR=/path/to/writable/cache
+uv run aidetect score track.mp3 --json
+```
+
+The override applies to every model loader. An explicit `cache_dir=` passed to
+`from_pretrained()` takes precedence over the environment variable. URL responses are not written
+to this cache.
+
 ## Limitations
 
 Thresholds were derived on a small, genre-skewed 400-track set with unknown generators and are
@@ -75,3 +137,8 @@ conditional on the documented windows, placements, fill mode and preprocessing. 
 calibration is weak, and threshold margins are sensitive. Treat this as a shadow/review tool,
 revalidate on representative data before enforcement, and do not interpret `human` as proof of
 human authorship.
+
+URL fetches validate resolved addresses before connecting but do not pin the connection to that
+address, so a hostile DNS server could still rebind between validation and connection. The
+signature check is a cheap pre-filter, not a full file-type verifier; ffmpeg decides whether the
+payload is decodable. No retry/backoff is performed for transient URL failures.

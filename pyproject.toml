@@ -12,6 +12,9 @@ dependencies = [
   "numpy>=1.26,<2",
 ]
 
+[project.scripts]
+aidetect = "aidetect.cli:main"
+
 [project.optional-dependencies]
 # onnxruntime: runs the default fakeprint ONNX model on CPU; optional so plain imports stay light.
 onnx = ["onnxruntime>=1.23,<1.24"]

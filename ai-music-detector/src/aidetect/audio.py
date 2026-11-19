@@ -5,7 +5,7 @@ import subprocess
 import warnings
 from collections.abc import Callable
 from pathlib import Path
-from typing import cast
+from typing import Final, cast
 
 import numpy as np
 from numpy.typing import NDArray
@@ -25,7 +25,37 @@ from aidetect.errors import AudioDecodeError
 from aidetect.placement import resolve_offset_seconds
 from aidetect.types import AudioWindow
 
-__all__ = ["decode_window", "decode_window_bytes"]
+__all__ = ["decode_window", "decode_window_bytes", "is_audio_payload"]
+
+# Container/frame signatures accepted before ffmpeg handles the real validation (CC §8).
+_AUDIO_PREFIXES: Final[tuple[bytes, ...]] = (
+    b"ID3",  # MP3 with ID3 tag
+    b"OggS",  # Ogg Vorbis/Opus
+    b"fLaC",  # FLAC
+    b"\x1a\x45\xdf\xa3",  # Matroska/WebM
+    b"\x30\x26\xb2\x75\x8e\x66\xcf\x11\xa6\xd9\x00\xaa\x00\x62\xce\x6c",  # ASF/WMA
+)
+
+
+def is_audio_payload(data: bytes) -> bool:
+    """Sniff container signatures so remote bytes are checked before any decoding.
+
+    This is a cheap pre-filter for untrusted hosts, not a decoder: ffmpeg remains the
+    authority via :func:`decode_window_bytes`.
+    """
+
+    if not data:
+        return False
+    if data.startswith(_AUDIO_PREFIXES):
+        return True
+    if len(data) >= 12 and data[:4] == b"RIFF" and data[8:12] == b"WAVE":
+        return True
+    if len(data) >= 12 and data[:4] == b"FORM" and data[8:12] in (b"AIFF", b"AIFC"):
+        return True
+    if len(data) >= 8 and data[4:8] == b"ftyp":  # ISO BMFF (m4a/mp4)
+        return True
+    return len(data) >= 2 and data[0] == 0xFF and (data[1] & 0xE0) == 0xE0  # MP3/AAC frames
+
 
 _FFMPEG_BASE = [
     "ffmpeg",

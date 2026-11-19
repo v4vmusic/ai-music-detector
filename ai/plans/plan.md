@@ -55,7 +55,7 @@ Benchmark all *available* models; "all four" is qualified by these constraints.
 - [x] **Phase 4 — MusicDET feasibility** — research spike, gate D2
 - [x] **Phase 5 — Benchmark harness and report** — k-fold, metrics, calibration, gate D1
 - [x] **Phase 6 — Library foundation** — create `ai-music-detector/`, promote shared code
-- [ ] **Phase 7 — Library adapters and CLI** — URL/bytes inputs, CLI, docs
+- [x] **Phase 7 — Library adapters and CLI** — URL/bytes inputs, CLI, docs
 
 ## 5. Decision gates
 
@@ -324,7 +324,7 @@ Generate fixtures in test code with the standard `wave` module; commit no binary
 
 ### Phase 7 — Library adapters and CLI
 
-**Status:** [ ] not started  **Depends on:** Phase 6
+**Status:** [x] complete  **Depends on:** Phase 6
 
 **Goal:** finish the callable surface: safe URL and bytes inputs, CLI, cache configuration and documentation.
 
@@ -333,11 +333,11 @@ Generate fixtures in test code with the standard `wave` module; commit no binary
 **Out of scope:** HTTP service, worker/DB/RSS/UI work.
 
 **Test-first checklist:**
-- [ ] URL adapter rejects private IPs, loopback, non-http schemes, too many redirects, oversized bodies and timeouts using a local fake server/fakes — no external network.
-- [ ] URL adapter validates that downloaded bytes are audio before decoding.
-- [ ] Bytes adapter produces the same `Result` shape as a local file with identical fixture audio.
-- [ ] CLI emits valid JSON with a probability in `[0, 1]`; errors go to stderr with a non-zero exit code.
-- [ ] Cache directory override is honoured and documented.
+- [x] URL adapter rejects private IPs, loopback, non-http schemes, too many redirects, oversized bodies and timeouts using a local fake server/fakes — no external network.
+- [x] URL adapter validates that downloaded bytes are audio before decoding.
+- [x] Bytes adapter produces the same `Result` shape as a local file with identical fixture audio.
+- [x] CLI emits valid JSON with a probability in `[0, 1]`; errors go to stderr with a non-zero exit code.
+- [x] Cache directory override is honoured and documented.
 
 **Implementation notes:** ffmpeg via argument lists with `shell=False`; external hosts are untrusted; no `print()` in library code; rule of three before new helpers.
 
@@ -345,6 +345,11 @@ Generate fixtures in test code with the standard `wave` module; commit no binary
 
 **Human testing:** score a local file and one owner-supplied URL with `--json`; confirm diagnostics on stderr and a clean JSON object on stdout.
 
-**Done criteria:** [ ] checklist tests red then green; [ ] CC §2 checks pass; [ ] no external network calls in default tests; [ ] README matches behaviour.
+**Done criteria:** [x] checklist tests red then green; [x] CC §2 checks pass; [x] no external network calls in default tests; [x] README matches behaviour.
 
-**For later phases:** *(agent fills this in; name the later plan for HTTP wrapper / worker work if relevant.)*
+**For later phases:**
+- **HTTP wrapper / worker (not yet planned):** keep transport, request handling and persistence out of `aidetect.cli:main`; the CLI is a thin adapter over `Detector`/`CascadeDetector` and the console script registered in root `pyproject.toml`.
+- **HTTP wrapper / worker:** `aidetect/url.py` deliberately duplicates the URL validation in `scripts/download_ai_songs.py` (two copies, rule of three not yet met); that script was out of Phase 7 scope, so promote one shared adapter before adding a third caller.
+- **HTTP wrapper:** URL safety is check-then-connect (validated DNS address is not pinned at connection time), so rebinding by a hostile resolver remains a gap; fix at connection time if untrusted URLs are exposed at scale.
+- **HTTP wrapper:** fetch limits are module constants in `aidetect/url.py`, not CLI flags, and there is no retry/backoff; inject a fetcher via `score_url(..., fetcher=...)` rather than adding global mutable config.
+- **Bench work:** bench manifests still skip URLs; if a later bench scores remote audio, call the library adapter instead of adding a bench-local fetch helper.
