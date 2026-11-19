@@ -1,0 +1,898 @@
+{
+  "backends": {
+    "ast-60s": {
+      "backend": "ast-60s",
+      "loop_fill": {
+        "complete": true,
+        "config_hash": "55ece9940fd0dd5d9c7cc9adef60c1d0f2bb93cbd75be1e804f404671c487b0c",
+        "config_name": "AST-2a",
+        "dev_criterion": {
+          "ai_recall": 0.85,
+          "human_fpr": 0.2125,
+          "roc_auc": 0.886015625,
+          "separation_margin": -0.026259422302246094,
+          "target_recall": 0.85,
+          "threshold": 0.9737352132797241
+        },
+        "dev_metrics": {
+          "ece": 0.03828650461672975,
+          "f1": 1.0,
+          "fpr_at_95_recall": 0.0,
+          "log_loss": 0.039038694521076445,
+          "log_loss_before_temperature": 1.2023644142295624,
+          "pr_auc": 1.0,
+          "roc_auc": 1.0
+        },
+        "failed_tracks": 0,
+        "fill_diagnostics": {
+          "affected_track_examples": [
+            {
+              "label": "human",
+              "path": "cme2i5s2b099bli1x859i2i7p.mp3"
+            },
+            {
+              "label": "human",
+              "path": "cme2i9myp09fvli1xjkh7v5m6.mp3"
+            },
+            {
+              "label": "human",
+              "path": "cme2svzkf0iczli1xd7qx5463.mp3"
+            },
+            {
+              "label": "human",
+              "path": "cmf6vy9k6000bka1xvt6jf51f.mp3"
+            },
+            {
+              "label": "ai_generated",
+              "path": "cmsbz9a42048eod0i4qw4ljq1.mp3"
+            }
+          ],
+          "loop_filled_by_label": {
+            "ai_generated": 1,
+            "human": 4
+          },
+          "loop_filled_tracks": 5
+        },
+        "fill_mode": "loop-fill",
+        "identifiers_ok": true,
+        "model_id": "AI-Music-Detection/ai_music_detection_large_60s",
+        "model_revision": "5e29461bbfc41dc5fe4ed5f7fadc961aa84a7e3e",
+        "operating_point_diagnostics": {
+          "example_false_negative_paths": [
+            "cmglpzi7x0g7aod0iex3fxtko.mp3",
+            "cme2m6eud0fl0li1x5p6w0y1j.mp3",
+            "cmmlbp79s4dr9od0i63ruttrd.mp3",
+            "cmsg9kw4k050mod0iohke44q2.mp3",
+            "cmqoohfef032yod0jz3pl50jx.mp3",
+            "cmsenphqf04lvod0i228sx1ji.mp3"
+          ],
+          "example_false_positive_paths": [
+            "cmgloc79r0aslod0i9ufjbbe9.mp3",
+            "cmffvb0n7027qod1y0zx7hlyc.mp3",
+            "cmlwbhv34004mod0ihrklh4f1.mp3",
+            "cme2gwma706gvli1x2q9vcqwg.mp3",
+            "cme2gghmg031kli1xyl4zzpb8.mp3",
+            "cmffvb8u502dlod1yct0rnnja.mp3",
+            "cme2gpydi05kali1xmkwzvhg6.mp3",
+            "cmlwbhs7f000eod0ixoqmz4pb.mp3"
+          ],
+          "test_ai_false_negatives": 6,
+          "test_human_false_positives": 8,
+          "threshold_raw_score": 0.9737352132797241
+        },
+        "placement": "end",
+        "rows": 400,
+        "score_distribution_by_label": {
+          "ai_generated": {
+            "count": 200,
+            "max": 0.9999978542327881,
+            "median": 0.9999645352363586,
+            "min": 0.0002488502359483391
+          },
+          "human": {
+            "count": 200,
+            "max": 0.9999946355819702,
+            "median": 0.011786948423832655,
+            "min": 1.4134716366243083e-05
+          }
+        },
+        "scored_tracks": 400,
+        "test_metrics": {
+          "ece": 0.0860638115150562,
+          "ece_after_temperature": 0.0860638115150562,
+          "f1": 0.7837837837837838,
+          "fpr_at_95_recall": 0.55,
+          "log_loss": 0.4749408704961125,
+          "pr_auc": 0.8932509269631439,
+          "roc_auc": 0.875625
+        },
+        "warning_counts": {
+          "loop_filled": 5,
+          "peak_normalized_to_fit_range": 283,
+          "short_track_padded": 0
+        }
+      },
+      "loop_fill_config": "AST-2a",
+      "placement": "end",
+      "selected_zero_pad_config": "AST-1c",
+      "zero_pad": {
+        "complete": true,
+        "config_hash": "0305dbb9450d63f0892b80ea022a1c9b03b23c87811b507bd705b2ec8b7898db",
+        "config_name": "AST-1c",
+        "dev_criterion": {
+          "ai_recall": 0.85,
+          "human_fpr": 0.2125,
+          "roc_auc": 0.88640625,
+          "separation_margin": -0.026259422302246094,
+          "target_recall": 0.85,
+          "threshold": 0.9737352132797241
+        },
+        "dev_metrics": {
+          "ece": 0.03828650461672975,
+          "f1": 1.0,
+          "fpr_at_95_recall": 0.0,
+          "log_loss": 0.039038694521076445,
+          "log_loss_before_temperature": 1.2024167839021422,
+          "pr_auc": 1.0,
+          "roc_auc": 1.0
+        },
+        "failed_tracks": 0,
+        "fill_diagnostics": {
+          "affected_track_examples": [],
+          "loop_filled_by_label": {
+            "ai_generated": 0,
+            "human": 0
+          },
+          "loop_filled_tracks": 0
+        },
+        "fill_mode": "zero-pad",
+        "identifiers_ok": true,
+        "model_id": "AI-Music-Detection/ai_music_detection_large_60s",
+        "model_revision": "5e29461bbfc41dc5fe4ed5f7fadc961aa84a7e3e",
+        "operating_point_diagnostics": {
+          "example_false_negative_paths": [
+            "cmglpzi7x0g7aod0iex3fxtko.mp3",
+            "cme2m6eud0fl0li1x5p6w0y1j.mp3",
+            "cmmlbp79s4dr9od0i63ruttrd.mp3",
+            "cmsg9kw4k050mod0iohke44q2.mp3",
+            "cmqoohfef032yod0jz3pl50jx.mp3",
+            "cmsenphqf04lvod0i228sx1ji.mp3"
+          ],
+          "example_false_positive_paths": [
+            "cmgloc79r0aslod0i9ufjbbe9.mp3",
+            "cmffvb0n7027qod1y0zx7hlyc.mp3",
+            "cmlwbhv34004mod0ihrklh4f1.mp3",
+            "cme2gwma706gvli1x2q9vcqwg.mp3",
+            "cme2gghmg031kli1xyl4zzpb8.mp3",
+            "cmffvb8u502dlod1yct0rnnja.mp3",
+            "cme2gpydi05kali1xmkwzvhg6.mp3",
+            "cmlwbhs7f000eod0ixoqmz4pb.mp3"
+          ],
+          "test_ai_false_negatives": 6,
+          "test_human_false_positives": 8,
+          "threshold_raw_score": 0.9737352132797241
+        },
+        "placement": "end",
+        "rows": 400,
+        "score_distribution_by_label": {
+          "ai_generated": {
+            "count": 200,
+            "max": 0.9999978542327881,
+            "median": 0.9999639987945557,
+            "min": 0.0002488502359483391
+          },
+          "human": {
+            "count": 200,
+            "max": 0.9999946355819702,
+            "median": 0.011786948423832655,
+            "min": 1.05843719211407e-05
+          }
+        },
+        "scored_tracks": 400,
+        "test_metrics": {
+          "ece": 0.0860638115150562,
+          "ece_after_temperature": 0.0860638115150562,
+          "f1": 0.7837837837837838,
+          "fpr_at_95_recall": 0.55,
+          "log_loss": 0.4749408704961125,
+          "pr_auc": 0.8932509269631439,
+          "roc_auc": 0.875625
+        },
+        "warning_counts": {
+          "loop_filled": 0,
+          "peak_normalized_to_fit_range": 283,
+          "short_track_padded": 5
+        }
+      }
+    },
+    "spectttra-alpha-120s": {
+      "backend": "spectttra-alpha-120s",
+      "loop_fill": {
+        "complete": true,
+        "config_hash": "7bdec0d39d2170700742925058084cf813352ff46c5269b6c8c69019eb04c366",
+        "config_name": "STA-2a",
+        "dev_criterion": {
+          "ai_recall": 0.85,
+          "human_fpr": 0.20625,
+          "roc_auc": 0.901796875,
+          "separation_margin": -4.955106496810913,
+          "target_recall": 0.85,
+          "threshold": -1.8243114948272705
+        },
+        "dev_metrics": {
+          "ece": 1.6025527985817623e-05,
+          "f1": 1.0,
+          "fpr_at_95_recall": 0.0,
+          "log_loss": 1.60256563958313e-05,
+          "log_loss_before_temperature": 0.46852293352495256,
+          "pr_auc": 1.0,
+          "roc_auc": 1.0
+        },
+        "failed_tracks": 0,
+        "fill_diagnostics": {
+          "affected_track_examples": [
+            {
+              "label": "human",
+              "path": "cme2gfyku02mcli1xov9ppvuz.mp3"
+            },
+            {
+              "label": "human",
+              "path": "cme2go6tx053zli1xxganap2x.mp3"
+            },
+            {
+              "label": "human",
+              "path": "cme2gotrm059sli1xaeozlj4t.mp3"
+            },
+            {
+              "label": "human",
+              "path": "cme2gz60w06t1li1xjf85q418.mp3"
+            },
+            {
+              "label": "human",
+              "path": "cme2hqrmi08ktli1xo1rkmbxn.mp3"
+            },
+            {
+              "label": "human",
+              "path": "cme2i5s2b099bli1x859i2i7p.mp3"
+            },
+            {
+              "label": "human",
+              "path": "cme2i9myp09fvli1xjkh7v5m6.mp3"
+            },
+            {
+              "label": "human",
+              "path": "cme2k49sx0cekli1x1jpss7jg.mp3"
+            },
+            {
+              "label": "human",
+              "path": "cme2k49sx0celli1x6swjxean.mp3"
+            },
+            {
+              "label": "human",
+              "path": "cme2k49sx0cerli1xpjvgdvbj.mp3"
+            }
+          ],
+          "loop_filled_by_label": {
+            "ai_generated": 9,
+            "human": 17
+          },
+          "loop_filled_tracks": 26
+        },
+        "fill_mode": "loop-fill",
+        "identifiers_ok": true,
+        "model_id": "awsaf49/sonics-spectttra-alpha-120s",
+        "model_revision": "094b32a5545098a71c113f6ae9d5c55310564268",
+        "operating_point_diagnostics": {
+          "example_false_negative_paths": [
+            "cmglnh92i01thod0ibpteq0eo.mp3",
+            "cmmlbp79s4dr9od0i63ruttrd.mp3",
+            "cms1z6chs0193od0it5u6ps48.mp3",
+            "cmmowaw6k5i0sod0iwxl7rbu8.mp3"
+          ],
+          "example_false_positive_paths": [
+            "cme2gst1m05wnli1xrpxzq2et.mp3",
+            "cmffvb0n7027qod1y0zx7hlyc.mp3",
+            "cme2gzv9c06xbli1xn84a1xbh.mp3",
+            "cmlwbhv34004mod0ihrklh4f1.mp3",
+            "cme2gghmg031kli1xyl4zzpb8.mp3",
+            "cme2gglql0393li1xfw7e684z.mp3",
+            "cmguwgzak000tod0i0tkppe0l.mp3",
+            "cme2ij8xn09ruli1x9bf231sv.mp3",
+            "cme2gouie05a8li1x5xbk28ov.mp3"
+          ],
+          "test_ai_false_negatives": 4,
+          "test_human_false_positives": 9,
+          "threshold_raw_score": -1.8243114948272705
+        },
+        "placement": "middle",
+        "rows": 400,
+        "score_distribution_by_label": {
+          "ai_generated": {
+            "count": 200,
+            "max": 4.751949787139893,
+            "median": 1.762419581413269,
+            "min": -3.604297637939453
+          },
+          "human": {
+            "count": 200,
+            "max": 3.823207378387451,
+            "median": -2.6733222007751465,
+            "min": -3.7890214920043945
+          }
+        },
+        "scored_tracks": 400,
+        "test_metrics": {
+          "ece": 0.14345193304881562,
+          "ece_after_temperature": 0.14345193304881562,
+          "f1": 0.7848101265822784,
+          "fpr_at_95_recall": 0.525,
+          "log_loss": 0.45998561790266007,
+          "pr_auc": 0.877125504762403,
+          "roc_auc": 0.880625
+        },
+        "warning_counts": {
+          "loop_filled": 26,
+          "peak_normalized_to_fit_range": 291,
+          "short_track_padded": 0
+        }
+      },
+      "loop_fill_config": "STA-2a",
+      "placement": "middle",
+      "selected_zero_pad_config": "STA-1b",
+      "zero_pad": {
+        "complete": true,
+        "config_hash": "6296f0efd1ffaf09e9f1248be5b0047ef21965cc40825656de29bf6cb2b59a15",
+        "config_name": "STA-1b",
+        "dev_criterion": {
+          "ai_recall": 0.85,
+          "human_fpr": 0.25625,
+          "roc_auc": 0.8833203125,
+          "separation_margin": -4.955106496810913,
+          "target_recall": 0.85,
+          "threshold": -1.8243114948272705
+        },
+        "dev_metrics": {
+          "ece": 3.0468969283255455e-05,
+          "f1": 1.0,
+          "fpr_at_95_recall": 0.0,
+          "log_loss": 3.0469433471799507e-05,
+          "log_loss_before_temperature": 0.5027631446561943,
+          "pr_auc": 1.0,
+          "roc_auc": 1.0
+        },
+        "failed_tracks": 0,
+        "fill_diagnostics": {
+          "affected_track_examples": [],
+          "loop_filled_by_label": {
+            "ai_generated": 0,
+            "human": 0
+          },
+          "loop_filled_tracks": 0
+        },
+        "fill_mode": "zero-pad",
+        "identifiers_ok": true,
+        "model_id": "awsaf49/sonics-spectttra-alpha-120s",
+        "model_revision": "094b32a5545098a71c113f6ae9d5c55310564268",
+        "operating_point_diagnostics": {
+          "example_false_negative_paths": [
+            "cmglnh92i01thod0ibpteq0eo.mp3",
+            "cmmlbp79s4dr9od0i63ruttrd.mp3",
+            "cms1z6chs0193od0it5u6ps48.mp3",
+            "cmmowaw6k5i0sod0iwxl7rbu8.mp3"
+          ],
+          "example_false_positive_paths": [
+            "cme2gst1m05wnli1xrpxzq2et.mp3",
+            "cmffvb0n7027qod1y0zx7hlyc.mp3",
+            "cme2gzv9c06xbli1xn84a1xbh.mp3",
+            "cmlwbhv34004mod0ihrklh4f1.mp3",
+            "cme2gghmg031kli1xyl4zzpb8.mp3",
+            "cme2gglql0393li1xfw7e684z.mp3",
+            "cmguwgzak000tod0i0tkppe0l.mp3",
+            "cme2ij8xn09ruli1x9bf231sv.mp3",
+            "cme2gouie05a8li1x5xbk28ov.mp3"
+          ],
+          "test_ai_false_negatives": 4,
+          "test_human_false_positives": 9,
+          "threshold_raw_score": -1.8243114948272705
+        },
+        "placement": "middle",
+        "rows": 400,
+        "score_distribution_by_label": {
+          "ai_generated": {
+            "count": 200,
+            "max": 4.751949787139893,
+            "median": 1.762419581413269,
+            "min": -3.604297637939453
+          },
+          "human": {
+            "count": 200,
+            "max": 3.823207378387451,
+            "median": -2.609743595123291,
+            "min": -3.7890214920043945
+          }
+        },
+        "scored_tracks": 400,
+        "test_metrics": {
+          "ece": 0.1372913905855394,
+          "ece_after_temperature": 0.1372913905855394,
+          "f1": 0.7894736842105263,
+          "fpr_at_95_recall": 0.525,
+          "log_loss": 0.4596885887824855,
+          "pr_auc": 0.877125504762403,
+          "roc_auc": 0.880625
+        },
+        "warning_counts": {
+          "loop_filled": 0,
+          "peak_normalized_to_fit_range": 291,
+          "short_track_padded": 26
+        }
+      }
+    },
+    "spectttra-beta-120s": {
+      "backend": "spectttra-beta-120s",
+      "loop_fill": {
+        "complete": true,
+        "config_hash": "169f7a86e165b33ac90fc0352d45fd824371f45edae851b5246c5a00c9636ccb",
+        "config_name": "STB-2a",
+        "dev_criterion": {
+          "ai_recall": 0.85,
+          "human_fpr": 0.41875,
+          "roc_auc": 0.8216796875,
+          "separation_margin": -9.174102306365967,
+          "target_recall": 0.85,
+          "threshold": -4.2131547927856445
+        },
+        "dev_metrics": {
+          "ece": 0.020156255137045928,
+          "f1": 1.0,
+          "fpr_at_95_recall": 0.0,
+          "log_loss": 0.020362164047461922,
+          "log_loss_before_temperature": 1.0386667790752933,
+          "pr_auc": 1.0,
+          "roc_auc": 1.0
+        },
+        "failed_tracks": 0,
+        "fill_diagnostics": {
+          "affected_track_examples": [
+            {
+              "label": "human",
+              "path": "cme2gfyku02mcli1xov9ppvuz.mp3"
+            },
+            {
+              "label": "human",
+              "path": "cme2go6tx053zli1xxganap2x.mp3"
+            },
+            {
+              "label": "human",
+              "path": "cme2gotrm059sli1xaeozlj4t.mp3"
+            },
+            {
+              "label": "human",
+              "path": "cme2gz60w06t1li1xjf85q418.mp3"
+            },
+            {
+              "label": "human",
+              "path": "cme2hqrmi08ktli1xo1rkmbxn.mp3"
+            },
+            {
+              "label": "human",
+              "path": "cme2i5s2b099bli1x859i2i7p.mp3"
+            },
+            {
+              "label": "human",
+              "path": "cme2i9myp09fvli1xjkh7v5m6.mp3"
+            },
+            {
+              "label": "human",
+              "path": "cme2k49sx0cekli1x1jpss7jg.mp3"
+            },
+            {
+              "label": "human",
+              "path": "cme2k49sx0celli1x6swjxean.mp3"
+            },
+            {
+              "label": "human",
+              "path": "cme2k49sx0cerli1xpjvgdvbj.mp3"
+            }
+          ],
+          "loop_filled_by_label": {
+            "ai_generated": 9,
+            "human": 17
+          },
+          "loop_filled_tracks": 26
+        },
+        "fill_mode": "loop-fill",
+        "identifiers_ok": true,
+        "model_id": "awsaf49/sonics-spectttra-beta-120s",
+        "model_revision": "cc49422a98b5b92700876c608d0f9cdf27214a3e",
+        "operating_point_diagnostics": {
+          "example_false_negative_paths": [
+            "cmglpzi7x0g7aod0iex3fxtko.mp3",
+            "cmmlbp79s4dr9od0i63ruttrd.mp3",
+            "cmmowaw6k5i0sod0iwxl7rbu8.mp3"
+          ],
+          "example_false_positive_paths": [
+            "cme2knn0y0d72li1xlb224skb.mp3",
+            "cme2gst1m05wnli1xrpxzq2et.mp3",
+            "cme2knynz0d79li1xwyguqwwx.mp3",
+            "cmltu4c635hipod0id6u8wla9.mp3",
+            "cmffvb0n7027qod1y0zx7hlyc.mp3",
+            "cme3ajk6i02ghp81xmf8dei2t.mp3",
+            "cme2gzv9c06xbli1xn84a1xbh.mp3",
+            "cmglo19gc09kvod0it4h1n3hv.mp3",
+            "cmf61151a0ckeny1xf9kg5n9i.mp3",
+            "cme2gghmg031kli1xyl4zzpb8.mp3"
+          ],
+          "test_ai_false_negatives": 3,
+          "test_human_false_positives": 20,
+          "threshold_raw_score": -4.2131547927856445
+        },
+        "placement": "middle",
+        "rows": 400,
+        "score_distribution_by_label": {
+          "ai_generated": {
+            "count": 200,
+            "max": 6.916238307952881,
+            "median": -1.4098233580589294,
+            "min": -5.201364994049072
+          },
+          "human": {
+            "count": 200,
+            "max": 4.960947513580322,
+            "median": -4.380590200424194,
+            "min": -5.771127223968506
+          }
+        },
+        "scored_tracks": 400,
+        "test_metrics": {
+          "ece": 0.15043776897880726,
+          "ece_after_temperature": 0.15043776897880726,
+          "f1": 0.7560975609756098,
+          "fpr_at_95_recall": 0.5,
+          "log_loss": 0.5916781357459389,
+          "pr_auc": 0.835377291742468,
+          "roc_auc": 0.8375
+        },
+        "warning_counts": {
+          "loop_filled": 26,
+          "peak_normalized_to_fit_range": 291,
+          "short_track_padded": 0
+        }
+      },
+      "loop_fill_config": "STB-2a",
+      "placement": "middle",
+      "selected_zero_pad_config": "STB-1b",
+      "zero_pad": {
+        "complete": true,
+        "config_hash": "0236e120f8b4cbd2e869fb92f326a9bd9c9a62024d5ad057e7d6ffbd610d5def",
+        "config_name": "STB-1b",
+        "dev_criterion": {
+          "ai_recall": 0.85,
+          "human_fpr": 0.45,
+          "roc_auc": 0.8028125,
+          "separation_margin": -9.174102306365967,
+          "target_recall": 0.85,
+          "threshold": -4.2131547927856445
+        },
+        "dev_metrics": {
+          "ece": 0.020156255137045928,
+          "f1": 1.0,
+          "fpr_at_95_recall": 0.0,
+          "log_loss": 0.020362164047461922,
+          "log_loss_before_temperature": 1.0324736067729534,
+          "pr_auc": 1.0,
+          "roc_auc": 1.0
+        },
+        "failed_tracks": 0,
+        "fill_diagnostics": {
+          "affected_track_examples": [],
+          "loop_filled_by_label": {
+            "ai_generated": 0,
+            "human": 0
+          },
+          "loop_filled_tracks": 0
+        },
+        "fill_mode": "zero-pad",
+        "identifiers_ok": true,
+        "model_id": "awsaf49/sonics-spectttra-beta-120s",
+        "model_revision": "cc49422a98b5b92700876c608d0f9cdf27214a3e",
+        "operating_point_diagnostics": {
+          "example_false_negative_paths": [
+            "cmglpzi7x0g7aod0iex3fxtko.mp3",
+            "cmmlbp79s4dr9od0i63ruttrd.mp3",
+            "cmmowaw6k5i0sod0iwxl7rbu8.mp3"
+          ],
+          "example_false_positive_paths": [
+            "cme2knn0y0d72li1xlb224skb.mp3",
+            "cme2gst1m05wnli1xrpxzq2et.mp3",
+            "cme2knynz0d79li1xwyguqwwx.mp3",
+            "cmltu4c635hipod0id6u8wla9.mp3",
+            "cmffvb0n7027qod1y0zx7hlyc.mp3",
+            "cme3ajk6i02ghp81xmf8dei2t.mp3",
+            "cme2gzv9c06xbli1xn84a1xbh.mp3",
+            "cmglo19gc09kvod0it4h1n3hv.mp3",
+            "cmf61151a0ckeny1xf9kg5n9i.mp3",
+            "cme2gghmg031kli1xyl4zzpb8.mp3"
+          ],
+          "test_ai_false_negatives": 3,
+          "test_human_false_positives": 20,
+          "threshold_raw_score": -4.2131547927856445
+        },
+        "placement": "middle",
+        "rows": 400,
+        "score_distribution_by_label": {
+          "ai_generated": {
+            "count": 200,
+            "max": 6.916238307952881,
+            "median": -1.29519784450531,
+            "min": -5.201364994049072
+          },
+          "human": {
+            "count": 200,
+            "max": 4.960947513580322,
+            "median": -4.346769332885742,
+            "min": -5.771127223968506
+          }
+        },
+        "scored_tracks": 400,
+        "test_metrics": {
+          "ece": 0.1399510654887341,
+          "ece_after_temperature": 0.1399510654887341,
+          "f1": 0.7560975609756098,
+          "fpr_at_95_recall": 0.5,
+          "log_loss": 0.5933970598204494,
+          "pr_auc": 0.8312806530870058,
+          "roc_auc": 0.835625
+        },
+        "warning_counts": {
+          "loop_filled": 0,
+          "peak_normalized_to_fit_range": 291,
+          "short_track_padded": 26
+        }
+      }
+    },
+    "spectttra-gamma-120s": {
+      "backend": "spectttra-gamma-120s",
+      "loop_fill": {
+        "complete": true,
+        "config_hash": "3db5c9e12bb51f49cba66ace720611295bf3a1401ccd2045a567cfd9b929ac96",
+        "config_name": "STG-2a",
+        "dev_criterion": {
+          "ai_recall": 0.85,
+          "human_fpr": 0.5,
+          "roc_auc": 0.788046875,
+          "separation_margin": -5.74202299118042,
+          "target_recall": 0.85,
+          "threshold": -2.2436182498931885
+        },
+        "dev_metrics": {
+          "ece": 0.000554555681911741,
+          "f1": 1.0,
+          "fpr_at_95_recall": 0.0,
+          "log_loss": 0.0005547095047853485,
+          "log_loss_before_temperature": 0.6517325377096792,
+          "pr_auc": 1.0,
+          "roc_auc": 1.0
+        },
+        "failed_tracks": 0,
+        "fill_diagnostics": {
+          "affected_track_examples": [
+            {
+              "label": "human",
+              "path": "cme2gfyku02mcli1xov9ppvuz.mp3"
+            },
+            {
+              "label": "human",
+              "path": "cme2go6tx053zli1xxganap2x.mp3"
+            },
+            {
+              "label": "human",
+              "path": "cme2gotrm059sli1xaeozlj4t.mp3"
+            },
+            {
+              "label": "human",
+              "path": "cme2gz60w06t1li1xjf85q418.mp3"
+            },
+            {
+              "label": "human",
+              "path": "cme2hqrmi08ktli1xo1rkmbxn.mp3"
+            },
+            {
+              "label": "human",
+              "path": "cme2i5s2b099bli1x859i2i7p.mp3"
+            },
+            {
+              "label": "human",
+              "path": "cme2i9myp09fvli1xjkh7v5m6.mp3"
+            },
+            {
+              "label": "human",
+              "path": "cme2k49sx0cekli1x1jpss7jg.mp3"
+            },
+            {
+              "label": "human",
+              "path": "cme2k49sx0celli1x6swjxean.mp3"
+            },
+            {
+              "label": "human",
+              "path": "cme2k49sx0cerli1xpjvgdvbj.mp3"
+            }
+          ],
+          "loop_filled_by_label": {
+            "ai_generated": 9,
+            "human": 17
+          },
+          "loop_filled_tracks": 26
+        },
+        "fill_mode": "loop-fill",
+        "identifiers_ok": true,
+        "model_id": "awsaf49/sonics-spectttra-gamma-120s",
+        "model_revision": "57659d8cb04767893537bbeb89da973e2e5a0290",
+        "operating_point_diagnostics": {
+          "example_false_negative_paths": [
+            "cmglpzi7x0g7aod0iex3fxtko.mp3",
+            "cme2gz00c06skli1xtuh5g99y.mp3",
+            "cmmlbp79s4dr9od0i63ruttrd.mp3",
+            "cme2gifcg03y7li1x3x6i3nfr.mp3",
+            "cmlupmg4e6k3hod0if0uex813.mp3",
+            "cmmowaw6k5i0sod0iwxl7rbu8.mp3"
+          ],
+          "example_false_positive_paths": [
+            "cme2knn0y0d72li1xlb224skb.mp3",
+            "cmi5b603f00taod0ikv4vjpbh.mp3",
+            "cme2gst1m05wnli1xrpxzq2et.mp3",
+            "cmgloc79r0aslod0i9ufjbbe9.mp3",
+            "cme2gtsz90622li1xzw5a5wyz.mp3",
+            "cmffvb0n7027qod1y0zx7hlyc.mp3",
+            "cme3ajk6i02ghp81xmf8dei2t.mp3",
+            "cme2gzv9c06xbli1xn84a1xbh.mp3",
+            "cme2swkot0if0li1xnhfu84he.mp3",
+            "cme2gwma706gvli1x2q9vcqwg.mp3"
+          ],
+          "test_ai_false_negatives": 6,
+          "test_human_false_positives": 22,
+          "threshold_raw_score": -2.2436182498931885
+        },
+        "placement": "start",
+        "rows": 400,
+        "score_distribution_by_label": {
+          "ai_generated": {
+            "count": 200,
+            "max": 4.928711891174316,
+            "median": 0.8764622509479523,
+            "min": -4.244359970092773
+          },
+          "human": {
+            "count": 200,
+            "max": 3.8408570289611816,
+            "median": -2.205248713493347,
+            "min": -4.28828239440918
+          }
+        },
+        "scored_tracks": 400,
+        "test_metrics": {
+          "ece": 0.08215592580073472,
+          "ece_after_temperature": 0.08215592580073472,
+          "f1": 0.691358024691358,
+          "fpr_at_95_recall": 0.725,
+          "log_loss": 0.6148182684858922,
+          "pr_auc": 0.7527729603575415,
+          "roc_auc": 0.73875
+        },
+        "warning_counts": {
+          "loop_filled": 26,
+          "peak_normalized_to_fit_range": 293,
+          "short_track_padded": 0
+        }
+      },
+      "loop_fill_config": "STG-2a",
+      "placement": "start",
+      "selected_zero_pad_config": "STG-1a",
+      "zero_pad": {
+        "complete": true,
+        "config_hash": "8908d71e8790c73aa1880adf83cd25dce9d32251d8de0b7ca1892c197baf48fc",
+        "config_name": "STG-1a",
+        "dev_criterion": {
+          "ai_recall": 0.85,
+          "human_fpr": 0.54375,
+          "roc_auc": 0.7772265625,
+          "separation_margin": -5.74202299118042,
+          "target_recall": 0.85,
+          "threshold": -2.2436182498931885
+        },
+        "dev_metrics": {
+          "ece": 0.000554555681911741,
+          "f1": 1.0,
+          "fpr_at_95_recall": 0.0,
+          "log_loss": 0.0005547095047853485,
+          "log_loss_before_temperature": 0.6602090505639198,
+          "pr_auc": 1.0,
+          "roc_auc": 1.0
+        },
+        "failed_tracks": 0,
+        "fill_diagnostics": {
+          "affected_track_examples": [],
+          "loop_filled_by_label": {
+            "ai_generated": 0,
+            "human": 0
+          },
+          "loop_filled_tracks": 0
+        },
+        "fill_mode": "zero-pad",
+        "identifiers_ok": true,
+        "model_id": "awsaf49/sonics-spectttra-gamma-120s",
+        "model_revision": "57659d8cb04767893537bbeb89da973e2e5a0290",
+        "operating_point_diagnostics": {
+          "example_false_negative_paths": [
+            "cmglpzi7x0g7aod0iex3fxtko.mp3",
+            "cme2gz00c06skli1xtuh5g99y.mp3",
+            "cmmlbp79s4dr9od0i63ruttrd.mp3",
+            "cme2gifcg03y7li1x3x6i3nfr.mp3",
+            "cmlupmg4e6k3hod0if0uex813.mp3",
+            "cmmowaw6k5i0sod0iwxl7rbu8.mp3"
+          ],
+          "example_false_positive_paths": [
+            "cme2knn0y0d72li1xlb224skb.mp3",
+            "cmi5b603f00taod0ikv4vjpbh.mp3",
+            "cme2gst1m05wnli1xrpxzq2et.mp3",
+            "cmgloc79r0aslod0i9ufjbbe9.mp3",
+            "cme2gtsz90622li1xzw5a5wyz.mp3",
+            "cmffvb0n7027qod1y0zx7hlyc.mp3",
+            "cme3ajk6i02ghp81xmf8dei2t.mp3",
+            "cme2gzv9c06xbli1xn84a1xbh.mp3",
+            "cme2swkot0if0li1xnhfu84he.mp3",
+            "cme2gwma706gvli1x2q9vcqwg.mp3"
+          ],
+          "test_ai_false_negatives": 6,
+          "test_human_false_positives": 22,
+          "threshold_raw_score": -2.2436182498931885
+        },
+        "placement": "start",
+        "rows": 400,
+        "score_distribution_by_label": {
+          "ai_generated": {
+            "count": 200,
+            "max": 4.928711891174316,
+            "median": 0.8243561685085297,
+            "min": -4.244359970092773
+          },
+          "human": {
+            "count": 200,
+            "max": 3.8408570289611816,
+            "median": -2.0051661133766174,
+            "min": -4.28828239440918
+          }
+        },
+        "scored_tracks": 400,
+        "test_metrics": {
+          "ece": 0.08325735528739103,
+          "ece_after_temperature": 0.08325735528739103,
+          "f1": 0.6835443037974683,
+          "fpr_at_95_recall": 0.725,
+          "log_loss": 0.6168976686946669,
+          "pr_auc": 0.749574324084656,
+          "roc_auc": 0.735625
+        },
+        "warning_counts": {
+          "loop_filled": 0,
+          "peak_normalized_to_fit_range": 293,
+          "short_track_padded": 26
+        }
+      }
+    }
+  },
+  "criterion": {
+    "acceptable_recall_band": [
+      0.8,
+      0.9
+    ],
+    "comparison": "compare loop-fill against the T1 dev-selected zero-pad placement per backend using the same goal-aligned framework; report held-out test once per reported config",
+    "note": "FPR-at-target-recall is invariant to monotonic temperature scaling; raw scores are used.",
+    "primary": "minimize human FPR at AI recall 0.85, computed on dev only (raw scores)",
+    "selection_data": "dev-only goal metrics for comparison; held-out test reported once per config",
+    "target_recall": 0.85
+  },
+  "expected_rows": 400,
+  "seed": 42,
+  "split_strategy": "fixed_dev_test"
+}

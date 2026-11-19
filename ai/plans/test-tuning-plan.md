@@ -51,7 +51,7 @@ This plan is a pre–Phase 6 tuning track. It implements the experiments and evi
 
 - [x] **Phase T0 — Tuning harness prerequisites** — per-track placement strategies, loop-fill mode, config/metadata & experiment output support, tests (TDD)
 - [x] **Phase T1 — Placement sweep experiments** — run AST/STA/STB/STG start/middle/end sweeps (zero-pad), evaluate and select best placement per backend (dev, goal-aligned)
-- [ ] **Phase T2 — Loop-fill follow-up experiments** — run `*-2a` loop-fill on best placement per backend, evaluate
+- [x] **Phase T2 — Loop-fill follow-up experiments** — run `*-2a` loop-fill on best placement per backend, evaluate
 - [ ] **Phase T3 — Comparison, report, and D1 review** — consolidate results vs Phase 5 baseline, produce tuning report, owner gate for D1 reaffirm/change
 
 ## 5. Decision gates
@@ -153,7 +153,7 @@ No agent decides T-D1 alone.
 
 ### Phase T2 — Loop-fill follow-up experiments
 
-**Status:** [ ] not started  **Depends on:** Phase T1
+**Status:** [x] done  **Depends on:** Phase T1
 
 **Goal:** evaluate the selected non-zero fill strategy (`loop-fill`, simple repeat, no crossfade, applied only when the selected segment is shorter than required) on the dev-selected best placement for each backend.
 
@@ -166,8 +166,8 @@ No agent decides T-D1 alone.
 **Out of scope:** multi-window aggregation (deferred), additional fill methods, preprocessing experiments, broader placement re-sweeps (unless a blocking issue requires rerun — document and justify), and D1 decision.
 
 **Test-first checklist:**
-- [ ] If any analysis/evaluation helper code is added or changed, its behavior is covered by tests first using synthetic data; pure experiment execution and report writing require no new behavior tests.
-- [ ] For each completed config, raw JSONL records loop-fill configuration and affected-case signaling consistently with T0 behavior.
+- [x] If any analysis/evaluation helper code is added or changed, its behavior is covered by tests first using synthetic data; pure experiment execution and report writing require no new behavior tests.
+- [x] For each completed config, raw JSONL records loop-fill configuration and affected-case signaling consistently with T0 behavior.
 
 **Implementation notes:** reuse Phase T1 evaluation approach for comparability. Loop-fill impact may be limited by the number of short tracks; report observed impact plainly (including “no meaningful change” if applicable).
 
@@ -176,12 +176,16 @@ No agent decides T-D1 alone.
 **Human testing:** spot-check that loop-fill was applied only to short segments as intended (via warnings/metadata and a few known short tracks) and that outputs are separate from Phase 5 artifacts.
 
 **Done criteria:**
-- [ ] all in-scope loop-fill configs run or explicitly reported as failed with reasons
-- [ ] loop-fill vs selected zero-pad placement compared per backend with goal-aligned metrics and diagnostics
-- [ ] loop-fill comparison artifact written with clear config naming and caveats
-- [ ] CC §2 checks pass if any code/tests changed; Phase 5 committed artifacts unchanged
+- [x] all in-scope loop-fill configs run or explicitly reported as failed with reasons
+- [x] loop-fill vs selected zero-pad placement compared per backend with goal-aligned metrics and diagnostics
+- [x] loop-fill comparison artifact written with clear config naming and caveats
+- [x] CC §2 checks pass if any code/tests changed; Phase 5 committed artifacts unchanged
 
-**For later phases:** *(agent fills this in: configs run, affected-track counts, key metrics vs selected placements, artifact paths, and any run issues.)*
+**For later phases:**
+- For T3: configs run on T1-selected placements (all 400/400, 0 failures): `AST-2a` end, `STA-2a` middle, `STB-2a` middle, `STG-2a` start (seed 42). Raw: `benches/results/tuning/<CFG>/raw/<backend>.jsonl` (git-ignored). STA-2a was rerun cleanly after a timeout-interrupted partial run.
+- For T3: loop-fill affected 5/400 AST tracks (4 human, 1 AI) and 26/400 per SpecTTTra config (17 human, 9 AI), replacing `short_track_padded` with `loop_filled` as expected (`benches/results/tuning/loop-fill-summary.{json,md}`).
+- For T3: dev FPR@0.85 (raw, goal criterion) delta vs selected zero-pad was 0.0 AST, -0.0500 STA, -0.0312 STB, -0.0437 STG at the same dev-derived thresholds/margins; held-out operating-point human FPs/AI FNs were unchanged (8/6, 9/4, 20/3, 22/6). Held-out ROC-AUC/FPR@95 recall unchanged for AST/STA and negligible for STB/STG (0.8375/0.50, 0.7388/0.725). Treat as directional: dev gains did not translate to held-out FP reduction at the goal point.
+- For T3: comparison helper `benches/loop_fill_followup.py` (`build_summary`/`render_markdown`) follows the T1 `placement_sweep.py`/`selection.py` dev-only goal framework and reports held-out test once per reported config; selected zero-pad test metrics shown there are those already reported in T1. No Phase 5 artifacts changed.
 
 ---
 

@@ -170,6 +170,39 @@ This writes `benches/results/tuning/placement-sweep-summary.json` and `.md` besi
 directories. The criterion helpers live in `benches/_shared/selection.py`; the raw JSONL stays
 git-ignored while the summary files are committable.
 
+### Loop-fill follow-up (T2)
+
+Loop-fill (`simple repeat, no crossfade`, only when the selected segment is shorter than required)
+is evaluated on the T1 dev-selected placement per backend: `AST-2a` = `ast-60s`/`end`,
+`STA-2a` = `spectttra-alpha-120s`/`middle`, `STB-2a` = `spectttra-beta-120s`/`middle`,
+`STG-2a` = `spectttra-gamma-120s`/`start`. Run one GPU variant at a time:
+
+```bash
+uv run python benches/run_bench.py --backend ast-60s \
+  --manifest test-audio/test-songs.csv --experiment AST-2a --placement end --fill loop-fill \
+  --seed 42 --device cuda
+uv run python benches/run_bench.py --backend spectttra-alpha-120s \
+  --manifest test-audio/test-songs.csv --experiment STA-2a --placement middle --fill loop-fill \
+  --seed 42 --device cuda
+uv run python benches/run_bench.py --backend spectttra-beta-120s \
+  --manifest test-audio/test-songs.csv --experiment STB-2a --placement middle --fill loop-fill \
+  --seed 42 --device cuda
+uv run python benches/run_bench.py --backend spectttra-gamma-120s \
+  --manifest test-audio/test-songs.csv --experiment STG-2a --placement start --fill loop-fill \
+  --seed 42 --device cuda
+```
+
+Build the comparison artifact (uses the same dev-only goal framework, reports held-out test once
+per reported config, and includes fill-affected diagnostics):
+
+```bash
+uv run python benches/loop_fill_followup.py \
+  --manifest test-audio/test-songs.csv --seed 42
+```
+
+This writes `benches/results/tuning/loop-fill-summary.json` and `.md`. Raw JSONL stays
+git-ignored; summary files are committable.
+
 ### Compare all available backends
 
 To score all available backends, write raw per-backend JSONL into `benches/results/raw/`, and
@@ -304,6 +337,8 @@ The manifest now holds 200 `human` and 200 `ai_generated` rows. It is the same
   reports beside it are committable. Use the exact `--seed` and config name to rerun.
 - Placement-sweep comparison: `benches/results/tuning/placement-sweep-summary.{json,md}`
   (committable; built from the raw JSONL by `benches/placement_sweep.py`).
+- Loop-fill comparison: `benches/results/tuning/loop-fill-summary.{json,md}`
+  (committable; built from the raw JSONL by `benches/loop_fill_followup.py`).
 - Audio and model weights are never committed; weights download on first use into the cache
   controlled by `AIDETECT_CACHE_DIR` (default: the Hugging Face cache).
 
