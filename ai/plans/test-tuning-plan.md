@@ -49,7 +49,7 @@ This plan is a pre–Phase 6 tuning track. It implements the experiments and evi
 
 ## 4. Phase overview
 
-- [ ] **Phase T0 — Tuning harness prerequisites** — per-track placement strategies, loop-fill mode, config/metadata & experiment output support, tests (TDD)
+- [x] **Phase T0 — Tuning harness prerequisites** — per-track placement strategies, loop-fill mode, config/metadata & experiment output support, tests (TDD)
 - [ ] **Phase T1 — Placement sweep experiments** — run AST/STA/STB/STG start/middle/end sweeps (zero-pad), evaluate and select best placement per backend (dev, goal-aligned)
 - [ ] **Phase T2 — Loop-fill follow-up experiments** — run `*-2a` loop-fill on best placement per backend, evaluate
 - [ ] **Phase T3 — Comparison, report, and D1 review** — consolidate results vs Phase 5 baseline, produce tuning report, owner gate for D1 reaffirm/change
@@ -66,7 +66,7 @@ No agent decides T-D1 alone.
 
 ### Phase T0 — Tuning harness prerequisites
 
-**Status:** [ ] not started  **Depends on:** Phase 5 complete (baseline committed); `ai/reference/test-tuning-discussion.md` decisions recorded
+**Status:** [x] done  **Depends on:** Phase 5 complete (baseline committed); `ai/reference/test-tuning-discussion.md` decisions recorded
 
 **Goal:** extend bench decode/runner capabilities so placement and fill experiments can be run reproducibly and traced, with TDD coverage and no change to Phase 5 committed artifacts.
 
@@ -81,11 +81,11 @@ No agent decides T-D1 alone.
 **Out of scope:** running full 400-track GPU experiments (T1/T2), multi-window aggregation (deferred), `ast-60s` preprocessing/feature-param experiments, SpecTTTra preprocessing changes, loop-fill variants beyond simple loop/repeat no crossfade, changes to Phase 5 committed result artifacts, and Phase 6 library work.
 
 **Test-first checklist:**
-- [ ] Placement resolution: `start/middle/end` compute correct per-track offsets for representative durations (`D < W`, `D == W`, `D > W`) and do not introduce unnecessary padding when a full window fits.
-- [ ] Loop-fill: when the selected segment is shorter than `W`, output length equals `W`, content is deterministically loop/repeated (no crossfade), and fill is explicitly recorded; when the segment already fills `W`, samples/mode are unchanged relative to baseline behavior (except intentional metadata additions).
-- [ ] Zero-pad baseline behavior remains correct and existing short-track/padding semantics are preserved or explicitly and compatibly extended.
-- [ ] Runner/outputs record placement strategy and fill mode (and relevant config) so runs are traceable and config hashes distinguish configs.
-- [ ] Existing bench tests continue to pass (update tests only where behavior is intentionally extended and specified).
+- [x] Placement resolution: `start/middle/end` compute correct per-track offsets for representative durations (`D < W`, `D == W`, `D > W`) and do not introduce unnecessary padding when a full window fits.
+- [x] Loop-fill: when the selected segment is shorter than `W`, output length equals `W`, content is deterministically loop/repeated (no crossfade), and fill is explicitly recorded; when the segment already fills `W`, samples/mode are unchanged relative to baseline behavior (except intentional metadata additions).
+- [x] Zero-pad baseline behavior remains correct and existing short-track/padding semantics are preserved or explicitly and compatibly extended.
+- [x] Runner/outputs record placement strategy and fill mode (and relevant config) so runs are traceable and config hashes distinguish configs.
+- [x] Existing bench tests continue to pass (update tests only where behavior is intentionally extended and specified).
 
 **Implementation notes:** prefer small, explicit helpers (apply rule of three). Keep backend scoring I/O-free; decode/window policy remains in shared bench code. Do not change model revisions/preprocessing baselines except as required to support placement/fill. Avoid micromanaging internal structure, but ensure deterministic, testable behavior.
 
@@ -94,12 +94,18 @@ No agent decides T-D1 alone.
 **Human testing:** on a small synthetic/local manifest, run at least one backend/config smoke with each placement strategy and with `loop-fill` on a short/forced-short case; confirm per-track offsets/fill warnings/metadata and that outputs are written to the separate experiment location (not overwriting Phase 5 committed artifacts). Run CC §2 checks.
 
 **Done criteria:**
-- [ ] checklist tests written red then green
-- [ ] CC §2 checks pass (`uv run pytest -q`, `uv run ruff check . && uv run ruff format --check .`, `uv run mypy benches`)
-- [ ] placement and loop-fill behaviors are documented and traceable in outputs
-- [ ] no Phase 5 committed artifacts modified
+- [x] checklist tests written red then green
+- [x] CC §2 checks pass (`uv run pytest -q`, `uv run ruff check . && uv run ruff format --check .`, `uv run mypy benches`)
+- [x] placement and loop-fill behaviors are documented and traceable in outputs
+- [x] no Phase 5 committed artifacts modified
 
-**For later phases:** *(agent fills this in: final CLI/config names, output path convention, warning/metadata field names, and any notes on duration/offset handling.)*
+**For later phases:**
+- For T1/T2: use `run_bench.py --experiment <NAME>` with `--placement {start,middle,end}` and optionally `--fill loop-fill`; `--offset` is fixed-placement only and rejects combinations with placement. Config names like `AST-1b`/`STA-2a` are validated as `[A-Za-z0-9][A-Za-z0-9._-]*`.
+- For T1/T2: raw JSONL lands at `benches/results/tuning/<NAME>/raw/<backend>.jsonl` (git-ignored); `--compare --experiment <NAME>` writes `summary.json`/`calibration.json`/`report.md` beside it, with `--from-raw <dir>` supported. Evaluating rows containing `experiment` into `benches/results/` is rejected.
+- For T1/T2: row field `experiment` holds `config_name`, `placement`, `fill_mode` and `offset_seconds` only for fixed placement; scored rows also hold resolved `offset_seconds`. Short-segment warnings are `short_track_padded` (zero-pad) or `loop_filled` (loop-fill); both can coexist with `peak_normalized_to_fit_range`. Count fill-affected tracks from these warnings.
+- For T1/T2: config hashes now include the experiment config, so Phase 5 hashes (computed before this field) will not match a baseline rerun; compare tuning configs only against each other, and record the new hashes in comparison artifacts.
+- For T1/T2: reuse `resolve_offset_seconds()` in `benches/_shared/placement.py` for placement math and `ExperimentConfig`/path helpers in `benches/_shared/experiment.py`; `decode_window()` owns window/fill policy and backends remain I/O-free. No model downloads or preprocessing changes were part of T0.
+- For T2: loop-fill with a fixed offset beyond a track's end raises `AudioDecodeError` (no audio to repeat); duration-relative placements never hit that case. Multi-window aggregation remains deferred to a later phase.
 
 ---
 

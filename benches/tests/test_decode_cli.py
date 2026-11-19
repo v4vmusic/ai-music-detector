@@ -41,6 +41,21 @@ def test_decode_cli_reports_decode_errors(
     assert captured.err
 
 
+def test_decode_cli_reports_placement_and_fill(
+    tmp_path: Path,
+    write_wav: WriteWav,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    audio = write_wav(tmp_path / "six.wav", 6.0)
+    code = main(
+        ["--path", str(audio), "--window", "10", "--placement", "end", "--fill", "loop-fill"]
+    )
+    payload = json.loads(capsys.readouterr().out)
+    assert code == 0
+    assert payload["warnings"] == ["loop_filled"]
+    assert payload["shape"] == [160_000]
+
+
 def test_decode_script_runs_standalone_from_workspace_root(
     tmp_path: Path,
     write_wav: WriteWav,

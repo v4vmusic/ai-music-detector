@@ -13,8 +13,9 @@ import pytest
 from numpy.typing import NDArray
 
 from benches._shared.audio import decode_window
-from benches._shared.constants import SAMPLE_RATE
-from benches._shared.manifest import load_manifest
+from benches._shared.constants import SAMPLE_RATE, FillMode, Placement
+from benches._shared.experiment import ExperimentConfig
+from benches._shared.manifest import ManifestEntry, load_manifest
 from benches._shared.registry import (
     AST_SPEC,
     MODEL_KEY_AST,
@@ -226,14 +227,25 @@ def test_run_passes_window_duration_and_offset_to_decoder(
     good = write_wav(tmp_path / "good.wav", 10.0)
     manifest = tmp_path / "manifest.csv"
     manifest.write_text("path,label\ngood.wav,human\n", encoding="utf-8")
-    calls: list[tuple[Path, float, float]] = []
+    calls: list[tuple[Path, float, float, FillMode, Placement | None]] = []
     real_decode = decode_window
 
     def recording_decode(
-        path: Path | str, *, window_seconds: float, offset_seconds: float = 0.0
+        path: Path | str,
+        *,
+        window_seconds: float,
+        offset_seconds: float = 0.0,
+        fill_mode: FillMode = "zero-pad",
+        placement: Placement | None = None,
     ) -> AudioWindow:
-        calls.append((Path(path), window_seconds, offset_seconds))
-        return real_decode(path, window_seconds=window_seconds, offset_seconds=offset_seconds)
+        calls.append((Path(path), window_seconds, offset_seconds, fill_mode, placement))
+        return real_decode(
+            path,
+            window_seconds=window_seconds,
+            offset_seconds=offset_seconds,
+            fill_mode=fill_mode,
+            placement=placement,
+        )
 
     monkeypatch.setattr("benches.run_bench.decode_window", recording_decode)
 
@@ -242,11 +254,11 @@ def test_run_passes_window_duration_and_offset_to_decoder(
         tmp_path / "out.jsonl",
         _StubBackend(),
         seed=7,
-        offset_seconds=25.0,
+        config=ExperimentConfig(placement="fixed", offset_seconds=25.0, fill_mode="loop-fill"),
     )
 
     assert count == 1
-    assert calls == [(good.resolve(), 10.0, 25.0)]
+    assert calls == [(good.resolve(), 10.0, 25.0, "loop-fill", None)]
 
 
 def test_compare_mode_writes_summary_calibration_report_and_records_failure(
@@ -446,3 +458,189 @@ def test_compare_mode_runs_all_backends_and_records_load_failure(
     assert (results_dir / "summary.json").exists()
     assert (results_dir / "calibration.json").exists()
     assert (results_dir / "report.md").exists()
+
+
+def test_run_records_experiment_config_and_actual_offset(
+    tmp_path: Path, write_wav: WriteWav
+) -> None:
+    write_wav(tmp_path / "twelve.wav", 12.0)
+    manifest = tmp_path / "manifest.csv"
+    manifest.write_text("path,label\ntwelve.wav,human\n", encoding="utf-8")
+    out = tmp_path / "out.jsonl"
+    config = ExperimentConfig(name="AST-1c", placement="end", fill_mode="loop-fill")
+
+    count = run(load_manifest(manifest), out, _StubBackend(), seed=7, config=config)
+
+    assert count == 1
+    row = json.loads(out.read_text(encoding="utf-8").splitlines()[0])
+    assert row["experiment"] == {
+        "config_name": "AST-1c",
+        "placement": "end",
+        "fill_mode": "loop-fill",
+    }
+    assert row["offset_seconds"] == pytest.approx(2.0)
+
+
+def test_config_hash_distinguishes_placement_and_fill_configs(
+    tmp_path: Path, write_wav: WriteWav
+) -> None:
+    audio = write_wav(tmp_path / "ten.wav", 10.0)
+    entries = [ManifestEntry(path=audio, label="human")]
+    hashes: list[str] = []
+    for index, config in enumerate(
+        (
+            ExperimentConfig(placement="fixed", offset_seconds=25.0),
+            ExperimentConfig(placement="start"),
+            ExperimentConfig(placement="middle", fill_mode="loop-fill"),
+        )
+    ):
+        out = tmp_path / f"out-{index}.jsonl"
+        run(entries, out, _StubBackend(), seed=42, config=config)
+        row = json.loads(out.read_text(encoding="utf-8").splitlines()[0])
+        hashes.append(row["config_hash"])
+    assert len(set(hashes)) == 3
+
+
+def test_main_experiment_writes_to_tuning_directory(
+    tmp_path: Path, write_wav: WriteWav, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    write_wav(tmp_path / "ten.wav", 10.0)
+    manifest = tmp_path / "manifest.csv"
+    manifest.write_text("path,label\nten.wav,human\n", encoding="utf-8")
+
+    class _Pipeline:
+        def __call__(
+            self, samples: NDArray[np.float32], *, sampling_rate: int
+        ) -> Mapping[int, float]:
+            return {0: 0.8, 1: 0.2}
+
+        def id2label(self) -> Mapping[int, str]:
+            return {0: "human", 1: "ai_generated"}
+
+        def unload(self) -> None:
+            return None
+
+    monkeypatch.setattr(
+        "benches.run_bench._load_ast_pipeline",
+        lambda spec, *, cache_dir, device: _Pipeline(),
+    )
+    exit_code = main(
+        [
+            "--backend",
+            MODEL_KEY_AST,
+            "--manifest",
+            str(manifest),
+            "--seed",
+            "42",
+            "--device",
+            "cpu",
+            "--experiment",
+            "AST-1b",
+            "--placement",
+            "middle",
+            "--fill",
+            "loop-fill",
+            "--experiments-dir",
+            str(tmp_path / "tuning"),
+        ]
+    )
+    assert exit_code == 0
+    out = tmp_path / "tuning" / "AST-1b" / "raw" / f"{MODEL_KEY_AST}.jsonl"
+    row = json.loads(out.read_text(encoding="utf-8").splitlines()[0])
+    assert row["experiment"]["placement"] == "middle"
+    assert row["experiment"]["fill_mode"] == "loop-fill"
+    assert row["experiment"]["config_name"] == "AST-1b"
+    assert "loop_filled" in row["warnings"]
+
+
+def test_main_rejects_tuning_config_without_experiment(tmp_path: Path, write_wav: WriteWav) -> None:
+    write_wav(tmp_path / "ten.wav", 10.0)
+    manifest = tmp_path / "manifest.csv"
+    manifest.write_text("path,label\nten.wav,human\n", encoding="utf-8")
+    with pytest.raises(SystemExit) as excinfo:
+        main(
+            [
+                "--backend",
+                MODEL_KEY_FAKEPRINT,
+                "--manifest",
+                str(manifest),
+                "--out",
+                str(tmp_path / "out.jsonl"),
+                "--placement",
+                "end",
+            ]
+        )
+    assert excinfo.value.code == 2
+
+
+def test_main_compare_experiment_writes_only_to_tuning_dir(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    raw_dir = tmp_path / "tuning" / "AST-1a" / "raw"
+    raw_dir.mkdir(parents=True)
+    rows = [
+        {
+            "path": f"/{label}.wav",
+            "label": label,
+            "raw_score": score,
+            "model_id": "stub/model",
+            "model_revision": "rev",
+            "config_hash": "hash",
+            "versions": {"numpy": "1.26.4"},
+            "timings": {"score_seconds": 0.01},
+            "experiment": {"config_name": "AST-1a", "placement": "start", "fill_mode": "zero-pad"},
+        }
+        for label, score in (("human", -1.0), ("ai_generated", 1.0))
+    ]
+    (raw_dir / "ast-60s.jsonl").write_text(
+        "\n".join(json.dumps(row) for row in rows) + "\n", encoding="utf-8"
+    )
+    manifest = tmp_path / "manifest.csv"
+    manifest.write_text("path,label\n", encoding="utf-8")
+    baseline_dir = tmp_path / "baseline"
+    monkeypatch.setattr("benches.run_bench.BASELINE_RESULTS_DIR", baseline_dir)
+
+    exit_code = main(
+        [
+            "--compare",
+            "--experiment",
+            "AST-1a",
+            "--from-raw",
+            str(raw_dir),
+            "--manifest",
+            str(manifest),
+            "--seed",
+            "42",
+            "--experiments-dir",
+            str(tmp_path / "tuning"),
+        ]
+    )
+
+    assert exit_code == 0
+    results_dir = tmp_path / "tuning" / "AST-1a"
+    assert (results_dir / "summary.json").exists()
+    assert (results_dir / "calibration.json").exists()
+    assert (results_dir / "report.md").exists()
+    assert not baseline_dir.exists()
+
+
+def test_compare_mode_rejects_tuning_rows_in_baseline_results(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from benches.run_bench import compare_from_raw
+
+    raw_dir = tmp_path / "raw"
+    raw_dir.mkdir()
+    row = {
+        "path": "/h.wav",
+        "label": "human",
+        "raw_score": -1.0,
+        "experiment": {"config_name": "AST-1a", "placement": "start", "fill_mode": "zero-pad"},
+    }
+    (raw_dir / "ast-60s.jsonl").write_text(json.dumps(row) + "\n", encoding="utf-8")
+    results_dir = tmp_path / "results"
+    monkeypatch.setattr("benches.run_bench.BASELINE_RESULTS_DIR", results_dir)
+
+    with pytest.raises(ValueError, match="baseline"):
+        compare_from_raw(raw_dir, results_dir, seed=42)

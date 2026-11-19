@@ -29,10 +29,12 @@ track002.wav,ai_generated
 
 `label` is exactly `human` or `ai_generated`. A relative `path` is resolved against the
 directory containing the manifest. Extra columns are ignored. `http(s)://` rows are skipped
-with a warning; URL fetching is not bench work. Audio under 5 s is rejected; a track shorter
-than the requested window is zero-padded with a `short_track_padded` warning. If a decoded
-window's peak magnitude exceeds 1.0, samples are conditionally peak-normalized by `1/peak`
-(preserving waveform shape, no clipping) to fit `[-1.0, 1.0]` and a
+with a warning; URL fetching is not bench work. Audio under 5 s is rejected. When the selected
+window segment is shorter than the window, the default `zero-pad` fill emits a
+`short_track_padded` warning; `loop-fill` repeats the available audio with no crossfade and emits
+`loop_filled`. Fill applies only to the short remainder; a full segment is never changed. If a
+decoded window's peak magnitude exceeds 1.0, samples are conditionally peak-normalized by
+`1/peak` (preserving waveform shape, no clipping) to fit `[-1.0, 1.0]` and a
 `peak_normalized_to_fit_range` warning is emitted; windows already within range are unchanged.
 
 ## Decode one file
@@ -41,9 +43,17 @@ window's peak magnitude exceeds 1.0, samples are conditionally peak-normalized b
 uv run python benches/decode.py --path /path/to/track.wav --offset 2 --window 3
 ```
 
-`--offset` defaults to 0 seconds; `--window` is required. The command prints one JSON object
-to stdout with `path`, `sample_rate`, `shape`, `duration_seconds` and `warnings`. Errors are
-written to stderr with a non-zero exit code.
+`--offset` defaults to 0 seconds; `--window` is required. `--placement {start,middle,end}`
+resolves a duration-relative offset per track (`start=0`,
+`middle=max(0,(D-W)/2)`, `end=max(0,D-W)`) and overrides `--offset`; the default uses the fixed
+offset. `--fill {zero-pad,loop-fill}` selects short-segment fill (default `zero-pad`). The
+command prints one JSON object to stdout with `path`, `sample_rate`, `shape`, `duration_seconds`
+and `warnings`. Errors are written to stderr with a non-zero exit code.
+
+```bash
+uv run python benches/decode.py --path /path/to/track.wav --window 60 --placement end
+uv run python benches/decode.py --path /path/to/track.wav --window 120 --fill loop-fill
+```
 
 ## Bench command convention
 
@@ -69,10 +79,63 @@ of each track; SpecTTTra scores a 120 s window at 25 s by default; AST scores a 
 25 s by default.
 
 Each local manifest row produces one JSONL line. Scored rows contain the shared `ModelOutput`
-fields plus `path`, `label`, `seed`, `config_hash` and package `versions`; `timings.score_seconds`
-is wall time and `gpu_seconds` is `null` for this CPU backend. A failed decode produces a row
-with `warnings`, `error`, `seed`, `config_hash` and `versions` but no score fields, and the run
-continues.
+fields plus `path`, `label`, `offset_seconds`, `experiment`, `seed`, `config_hash` and package
+`versions`; `timings.score_seconds` is wall time and `gpu_seconds` is `null` for this CPU backend.
+A failed decode produces a row with `warnings`, `error`, `seed`, `config_hash`, `experiment` and
+`versions` but no score fields, and the run continues.
+
+### Tuning experiments (placement and fill)
+
+Tuning runs use `--experiment <NAME>` instead of `--out`. The name must match
+`[A-Za-z0-9][A-Za-z0-9._-]*` (e.g. `AST-1b`, `STA-2a`) and selects a separate output tree:
+
+```
+<experiments-dir>/<NAME>/raw/<backend>.jsonl
+```
+
+`--experiments-dir` defaults to `benches/results/tuning`. Tuning configs require `--experiment`,
+so they cannot overwrite the Phase 5 committed artifacts or baseline raw files. `--out` and
+`--experiment` are mutually exclusive. Each row records `experiment` with `config_name`,
+`placement` (`fixed`/`start`/`middle`/`end`), `fill_mode` (`zero-pad`/`loop-fill`) and, for fixed
+placement, `offset_seconds`; the `config_hash` includes the same fields. Scored rows also record
+the resolved per-track `offset_seconds` (and the backend's `window` string includes it where
+supported). Fill-affected rows carry `short_track_padded` or `loop_filled` in `warnings`.
+
+```bash
+# Baseline reference: fixed 25 s offset, zero-pad (AST default offset, no --placement needed)
+uv run python benches/run_bench.py \
+  --backend ast-60s \
+  --manifest test-audio/test-songs.csv \
+  --experiment AST-B0 --seed 42 --device cuda
+
+# Middle window, zero-pad
+uv run python benches/run_bench.py \
+  --backend ast-60s \
+  --manifest test-audio/test-songs.csv \
+  --experiment AST-1b --placement middle --seed 42 --device cuda
+
+# Best placement with loop-fill (only short segments are looped)
+uv run python benches/run_bench.py \
+  --backend spectttra-alpha-120s \
+  --manifest test-audio/test-songs.csv \
+  --experiment STA-2a --placement end --fill loop-fill --seed 42 --device cuda
+```
+
+`--offset` is accepted only with fixed placement; per-track placements derive their offsets from
+each track's decoded duration. Evaluate a tuning config into its own directory (never into the
+Phase 5 results) with:
+
+```bash
+uv run python benches/run_bench.py \
+  --compare --experiment AST-1b \
+  --manifest test-audio/test-songs.csv \
+  --seed 42
+```
+
+This reads `benches/results/tuning/AST-1b/raw/` and writes `summary.json`, `calibration.json` and
+`report.md` beside it. `--from-raw <dir>` can point at an existing tuning raw directory with
+`--experiment`; `--compare` with `--experiment` rejects `--results-dir`. Evaluating rows that
+contain an `experiment` field into `benches/results/` is rejected.
 
 ### Compare all available backends
 
@@ -202,8 +265,10 @@ The manifest now holds 200 `human` and 200 `ai_generated` rows. It is the same
 
 ## Result locations
 
-- Raw per-track JSONL: `benches/results/raw/` (git-ignored).
-- Committed, named outputs: `benches/results/calibration.json`, `summary.json`, `report.md`.
+- Baseline raw per-track JSONL: `benches/results/raw/` (git-ignored).
+- Baseline committed outputs: `benches/results/calibration.json`, `summary.json`, `report.md`.
+- Tuning raw JSONL: `benches/results/tuning/<config>/raw/` (git-ignored); tuning summaries and
+  reports beside it are committable. Use the exact `--seed` and config name to rerun.
 - Audio and model weights are never committed; weights download on first use into the cache
   controlled by `AIDETECT_CACHE_DIR` (default: the Hugging Face cache).
 

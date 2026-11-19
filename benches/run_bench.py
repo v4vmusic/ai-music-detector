@@ -10,7 +10,7 @@ from dataclasses import asdict
 from importlib.metadata import version
 from pathlib import Path
 from types import MappingProxyType
-from typing import Any, Final, Protocol
+from typing import Any, Final, Protocol, cast
 from urllib.request import urlopen
 
 import numpy as np
@@ -23,8 +23,23 @@ if str(_WORKSPACE_ROOT) not in sys.path:
     sys.path.insert(0, str(_WORKSPACE_ROOT))
 
 from benches._shared.audio import decode_window  # noqa: E402
-from benches._shared.constants import SAMPLE_RATE  # noqa: E402
+from benches._shared.constants import (  # noqa: E402
+    FILL_MODES,
+    PLACEMENT_FIXED,
+    PLACEMENTS,
+    SAMPLE_RATE,
+    FillMode,
+    Placement,
+)
 from benches._shared.errors import AidetectError, ModelLoadError  # noqa: E402
+from benches._shared.experiment import (  # noqa: E402
+    BASELINE_RESULTS_DIR,
+    DEFAULT_EXPERIMENTS_DIR,
+    ExperimentConfig,
+    assert_experiment_location,
+    experiment_raw_path,
+    validate_config_name,
+)
 from benches._shared.manifest import ManifestEntry, load_manifest  # noqa: E402
 from benches._shared.registry import (  # noqa: E402
     AST_SPEC,
@@ -87,8 +102,15 @@ def _package_versions(names: Sequence[str] = VERSION_NAMES) -> dict[str, str]:
     return {name: version(name) for name in names}
 
 
-def _config_hash(metadata: ModelMetadata, seed: int, versions: Mapping[str, str]) -> str:
-    payload = {"metadata": asdict(metadata), "seed": seed, "versions": dict(versions)}
+def _config_hash(
+    metadata: ModelMetadata, seed: int, versions: Mapping[str, str], config: ExperimentConfig
+) -> str:
+    payload = {
+        "metadata": asdict(metadata),
+        "seed": seed,
+        "versions": dict(versions),
+        "experiment": config.as_dict(),
+    }
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return hashlib.sha256(encoded).hexdigest()
 
@@ -101,13 +123,25 @@ def run(
     seed: int = DEFAULT_SEED,
     offset_seconds: float = 0.0,
     version_names: Sequence[str] = VERSION_NAMES,
+    config: ExperimentConfig | None = None,
 ) -> int:
-    """Score every local manifest entry, writing one JSONL row per entry."""
+    """Score every local manifest entry, writing one JSONL row per entry.
+
+    ``config`` carries tuning placement/fill choices; ``offset_seconds`` remains the fixed-offset
+    convenience for callers that do not supply a config.
+    """
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
+    experiment_config = config or ExperimentConfig(offset_seconds=offset_seconds)
+    placement = (
+        None
+        if experiment_config.placement == PLACEMENT_FIXED
+        else cast(Placement, experiment_config.placement)
+    )
     metadata = backend.metadata()
     versions = _package_versions(version_names)
-    config_hash = _config_hash(metadata, seed, versions)
+    config_hash = _config_hash(metadata, seed, versions, experiment_config)
+    experiment = experiment_config.as_dict()
 
     with out_path.open("w", encoding="utf-8") as handle:
         for entry in entries:
@@ -115,7 +149,9 @@ def run(
                 window = decode_window(
                     entry.path,
                     window_seconds=metadata.window_seconds,
-                    offset_seconds=offset_seconds,
+                    offset_seconds=experiment_config.offset_seconds,
+                    fill_mode=experiment_config.fill_mode,
+                    placement=placement,
                 )
             except (AidetectError, ValueError, OSError) as exc:
                 row: dict[str, object] = {
@@ -126,6 +162,7 @@ def run(
                     "seed": seed,
                     "config_hash": config_hash,
                     "versions": versions,
+                    "experiment": experiment,
                 }
             else:
                 result = backend.score(window)
@@ -133,9 +170,11 @@ def run(
                     "path": str(entry.path),
                     "label": entry.label,
                     **asdict(result),
+                    "offset_seconds": window.offset_seconds,
                     "seed": seed,
                     "config_hash": config_hash,
                     "versions": versions,
+                    "experiment": experiment,
                 }
             handle.write(json.dumps(row, sort_keys=True) + "\n")
     return len(entries)
@@ -352,6 +391,13 @@ def compare_from_raw(
     )
 
     per_backend_rows = _load_raw_dir(raw_dir)
+    if results_dir.resolve() == BASELINE_RESULTS_DIR.resolve():
+        for rows in per_backend_rows.values():
+            if any("experiment" in row for row in rows):
+                raise ValueError(
+                    "Tuning experiment rows cannot be evaluated into the baseline results "
+                    "directory; use --experiment for a separate results location"
+                )
     model_calibrations: dict[str, dict[str, Any]] = {}
     model_results: dict[str, dict[str, Any]] = {}
     backend_status: dict[str, dict[str, Any]] = {}
@@ -499,8 +545,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument(
         "--results-dir",
         type=Path,
-        default=Path("benches/results"),
-        help="directory for raw/, calibration.json, summary.json and report.md (compare mode)",
+        default=None,
+        help="directory for raw/, calibration.json, summary.json and report.md "
+        "(compare mode; default: benches/results)",
     )
     parser.add_argument(
         "--from-raw",
@@ -519,7 +566,30 @@ def main(argv: Sequence[str] | None = None) -> int:
         "--offset",
         type=float,
         default=None,
-        help="window offset in seconds (default: per-backend value)",
+        help="fixed window offset in seconds (default: per-backend value; not with --placement)",
+    )
+    parser.add_argument(
+        "--placement",
+        choices=PLACEMENTS,
+        default=PLACEMENT_FIXED,
+        help="per-track window placement: start/middle/end are duration-relative (default: fixed)",
+    )
+    parser.add_argument(
+        "--fill",
+        choices=FILL_MODES,
+        default="zero-pad",
+        help="short-segment fill: zero-pad (baseline) or loop-fill (default: zero-pad)",
+    )
+    parser.add_argument(
+        "--experiment",
+        default=None,
+        help="tuning config name; writes under --experiments-dir instead of baseline results",
+    )
+    parser.add_argument(
+        "--experiments-dir",
+        type=Path,
+        default=DEFAULT_EXPERIMENTS_DIR,
+        help="root for tuning outputs (default: benches/results/tuning)",
     )
     parser.add_argument(
         "--device",
@@ -532,18 +602,30 @@ def main(argv: Sequence[str] | None = None) -> int:
         if args.backend or args.out:
             print("error: --compare does not take --backend or --out", file=sys.stderr)
             return 2
+        if args.placement != PLACEMENT_FIXED or args.fill != "zero-pad":
+            parser.error("--placement/--fill apply to single-backend runs, not --compare")
         k_folds = args.folds if args.folds is not None else 5
-        raw_dir = args.from_raw if args.from_raw is not None else args.results_dir / "raw"
         try:
+            if args.experiment:
+                if args.results_dir is not None:
+                    parser.error("--experiment and --results-dir are mutually exclusive")
+                results_dir = args.experiments_dir / validate_config_name(args.experiment)
+                assert_experiment_location(results_dir)
+                raw_dir = args.from_raw if args.from_raw is not None else results_dir / "raw"
+                if args.from_raw is not None:
+                    assert_experiment_location(raw_dir)
+            else:
+                results_dir = args.results_dir or BASELINE_RESULTS_DIR
+                raw_dir = args.from_raw if args.from_raw is not None else results_dir / "raw"
             if args.from_raw:
                 summary, _calibration = compare_from_raw(
-                    raw_dir, args.results_dir, seed=args.seed, k_folds=k_folds
+                    raw_dir, results_dir, seed=args.seed, k_folds=k_folds
                 )
             else:
                 entries = load_manifest(args.manifest)
                 summary, _calibration = run_compare(
                     entries,
-                    args.results_dir,
+                    results_dir,
                     seed=args.seed,
                     device=args.device,
                     k_folds=k_folds,
@@ -553,16 +635,28 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 1
         ok = sum(1 for b in summary.get("backends", {}).values() if b.get("ok"))
         print(
-            f"wrote calibration/summary/report to {args.results_dir} "
-            f"({ok} backends with scored rows)",
+            f"wrote calibration/summary/report to {results_dir} ({ok} backends with scored rows)",
             file=sys.stderr,
         )
         return 0
 
-    if not args.backend or args.out is None:
-        parser.error("the following arguments are required: --backend, --out")
+    if not args.backend:
+        parser.error("the following arguments are required: --backend")
+    if args.experiment and args.out is not None:
+        parser.error("--experiment and --out are mutually exclusive")
+    if not args.experiment and (args.placement != PLACEMENT_FIXED or args.fill != "zero-pad"):
+        parser.error("--experiment is required for tuning configs (--placement/--fill)")
+    if args.placement != PLACEMENT_FIXED and args.offset is not None:
+        parser.error("--offset cannot be combined with --placement start/middle/end")
 
     try:
+        if args.experiment:
+            out = experiment_raw_path(args.experiments_dir, args.experiment, args.backend)
+            assert_experiment_location(out)
+        else:
+            if args.out is None:
+                parser.error("the following arguments are required: --out")
+            out = args.out
         entries = load_manifest(args.manifest)
         if args.backend == MODEL_KEY_FAKEPRINT:
             backend: Scorer = load_fakeprint(model_bytes=_load_weights(FAKEPRINT_SPEC))
@@ -577,19 +671,27 @@ def main(argv: Sequence[str] | None = None) -> int:
             backend = load_spctttra(args.backend, classifier=classifier)
             version_names = SPECTTRA_VERSION_NAMES
         offset = DEFAULT_OFFSETS[args.backend] if args.offset is None else args.offset
+        if args.placement != PLACEMENT_FIXED:
+            offset = 0.0
+        config = ExperimentConfig(
+            name=args.experiment,
+            placement=cast(Placement, args.placement),
+            offset_seconds=offset,
+            fill_mode=cast(FillMode, args.fill),
+        )
         count = run(
             entries,
-            args.out,
+            out,
             backend,
             seed=args.seed,
-            offset_seconds=offset,
             version_names=version_names,
+            config=config,
         )
     except (AidetectError, ValueError, OSError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
 
-    print(f"wrote {count} rows to {args.out}", file=sys.stderr)
+    print(f"wrote {count} rows to {out}", file=sys.stderr)
     return 0
 
 

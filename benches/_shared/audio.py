@@ -10,12 +10,18 @@ import numpy as np
 from numpy.typing import NDArray
 
 from benches._shared.constants import (
+    FILL_MODES,
     MIN_TRACK_SECONDS,
+    PLACEMENT_FIXED,
     SAMPLE_RATE,
+    WARNING_LOOP_FILLED,
     WARNING_PEAK_NORMALIZED,
     WARNING_SHORT_TRACK_PADDED,
+    FillMode,
+    Placement,
 )
 from benches._shared.errors import AudioDecodeError
+from benches._shared.placement import resolve_offset_seconds
 from benches._shared.types import AudioWindow
 
 __all__ = ["decode_window"]
@@ -52,18 +58,34 @@ def _decode_pcm(path: Path) -> NDArray[np.float32]:
     return cast(NDArray[np.float32], np.frombuffer(result.stdout, dtype="<f4").copy())
 
 
+def _loop_fill(segment: NDArray[np.float32], required: int) -> NDArray[np.float32]:
+    """Repeat the available segment to fill the window, with no crossfade."""
+
+    repeats = (required + segment.size - 1) // segment.size
+    return np.tile(segment, repeats)[:required]
+
+
 def decode_window(
     path: Path | str,
     *,
     window_seconds: float,
     offset_seconds: float = 0.0,
+    fill_mode: FillMode = "zero-pad",
+    placement: Placement | None = None,
 ) -> AudioWindow:
-    """Decode a local file to one 16 kHz mono float32 window at the given offset."""
+    """Decode a local file to one 16 kHz mono float32 window.
+
+    ``placement`` resolves a duration-relative offset per track and overrides ``offset_seconds``;
+    ``None`` keeps the fixed offset. Short segments are zero-padded or loop-filled according to
+    ``fill_mode``.
+    """
 
     if not math.isfinite(window_seconds) or window_seconds <= 0.0:
         raise ValueError(f"window_seconds must be positive and finite, got {window_seconds!r}")
     if not math.isfinite(offset_seconds) or offset_seconds < 0.0:
         raise ValueError(f"offset_seconds must be non-negative and finite, got {offset_seconds!r}")
+    if fill_mode not in FILL_MODES:
+        raise ValueError(f"unknown fill mode {fill_mode!r}; expected one of {FILL_MODES}")
 
     audio_path = Path(path)
     samples = _decode_pcm(audio_path)
@@ -73,6 +95,14 @@ def decode_window(
             f"Track {audio_path} is {duration_seconds:.2f} s; "
             f"at least {MIN_TRACK_SECONDS:.0f} s is required"
         )
+    if placement == PLACEMENT_FIXED:
+        placement = None
+    if placement is not None:
+        offset_seconds = resolve_offset_seconds(duration_seconds, window_seconds, placement)
+        if not math.isfinite(offset_seconds) or offset_seconds < 0.0:
+            raise ValueError(
+                f"resolved offset must be non-negative and finite, got {offset_seconds!r}"
+            )
 
     required = int(round(window_seconds * SAMPLE_RATE))
     start = int(round(offset_seconds * SAMPLE_RATE))
@@ -80,6 +110,20 @@ def decode_window(
     if segment.size == required:
         window = segment
         window_warnings: tuple[str, ...] = ()
+    elif fill_mode == "loop-fill":
+        if segment.size == 0:
+            raise AudioDecodeError(
+                f"Track {audio_path} has no audio at offset {offset_seconds:g} s; "
+                "loop-fill cannot fill the window"
+            )
+        window = _loop_fill(segment, required)
+        window_warnings = (WARNING_LOOP_FILLED,)
+        warnings.warn(
+            f"Track {audio_path} cannot fill the {window_seconds:g} s window at "
+            f"offset {offset_seconds:g} s ({WARNING_LOOP_FILLED}); loop-filled without crossfade",
+            UserWarning,
+            stacklevel=2,
+        )
     else:
         window = np.zeros(required, dtype=np.float32)
         window[: segment.size] = segment

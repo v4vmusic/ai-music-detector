@@ -13,10 +13,11 @@ htmlcov/
 build/
 dist/
 
-# Owner-supplied data and run output (CC §7, §10)
+# Owner-supplied data and run output (CC §7, §10); tuning summaries/reports stay committable
 test-audio/
 benches/results/raw/
 benches/results/*.jsonl
+benches/results/tuning/**/raw/
 
 # Audio and model weights are never committed
 *.wav
