@@ -339,6 +339,9 @@ The manifest now holds 200 `human` and 200 `ai_generated` rows. It is the same
   (committable; built from the raw JSONL by `benches/placement_sweep.py`).
 - Loop-fill comparison: `benches/results/tuning/loop-fill-summary.{json,md}`
   (committable; built from the raw JSONL by `benches/loop_fill_followup.py`).
+- Consolidated tuning comparison (T3): `benches/results/tuning/report.md` and
+  `benches/results/tuning/summary.json` (committable; compares T1/T2 against the Phase 5
+  baseline and includes the pending D1 review questionnaire).
 - Audio and model weights are never committed; weights download on first use into the cache
   controlled by `AIDETECT_CACHE_DIR` (default: the Hugging Face cache).
 

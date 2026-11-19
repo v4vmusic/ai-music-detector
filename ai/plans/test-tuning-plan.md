@@ -52,7 +52,7 @@ This plan is a pre–Phase 6 tuning track. It implements the experiments and evi
 - [x] **Phase T0 — Tuning harness prerequisites** — per-track placement strategies, loop-fill mode, config/metadata & experiment output support, tests (TDD)
 - [x] **Phase T1 — Placement sweep experiments** — run AST/STA/STB/STG start/middle/end sweeps (zero-pad), evaluate and select best placement per backend (dev, goal-aligned)
 - [x] **Phase T2 — Loop-fill follow-up experiments** — run `*-2a` loop-fill on best placement per backend, evaluate
-- [ ] **Phase T3 — Comparison, report, and D1 review** — consolidate results vs Phase 5 baseline, produce tuning report, owner gate for D1 reaffirm/change
+- [x] **Phase T3 — Comparison, report, and D1 review** — consolidate results vs Phase 5 baseline, produce tuning report, owner gate for D1 reaffirm/change
 
 ## 5. Decision gates
 
@@ -191,7 +191,7 @@ No agent decides T-D1 alone.
 
 ### Phase T3 — Comparison, report, and D1 review
 
-**Status:** [ ] not started  **Depends on:** Phase T1, Phase T2
+**Status:** [x] done  **Depends on:** Phase T1, Phase T2
 
 **Goal:** consolidate tuning evidence, compare it against Phase 5 baselines, and produce a clear recommendation package for the owner to reaffirm or change provisional D1 before Phase 6.
 
@@ -205,7 +205,7 @@ No agent decides T-D1 alone.
 **Out of scope:** starting Phase 6 implementation, multi-window aggregation experiments, additional model runs beyond T1/T2 unless explicitly requested by owner (would require plan adjustment), and changing Phase 5 committed baseline artifacts.
 
 **Test-first checklist:**
-- [ ] If any analysis/consolidation helper code is added or changed, its behavior is covered by tests first using synthetic data; writing the report/questionnaire requires no new behavior tests.
+- [x] If any analysis/consolidation helper code is added or changed, its behavior is covered by tests first using synthetic data; writing the report/questionnaire requires no new behavior tests.
 
 **Implementation notes:** be precise about which numbers come from held-out test (reported once per chosen config) vs dev/selection. Keep claims proportional to evidence and dataset limitations. If results are inconclusive, recommend retaining provisional D1 with rationale rather than forcing a change.
 
@@ -214,9 +214,13 @@ No agent decides T-D1 alone.
 **Human testing:** owner reviews the tuning report and answers the D1 review questionnaire.
 
 **Done criteria:**
-- [ ] tuning results consolidated and compared against Phase 5 baseline with goal-aligned metrics and caveats
-- [ ] tuning report (and optional summary) written with clear traceability to experiment artifacts
-- [ ] owner presented with a D1 reaffirm/change questionnaire; T-D1 recorded in `ai/plans/plan.md` §5 if and only if owner decides
-- [ ] CC §2 checks pass if any code/tests changed; Phase 5 committed artifacts unchanged
+- [x] tuning results consolidated and compared against Phase 5 baseline with goal-aligned metrics and caveats
+- [x] tuning report (and optional summary) written with clear traceability to experiment artifacts
+- [x] owner presented with a D1 reaffirm/change questionnaire; T-D1 recorded in `ai/plans/plan.md` §5 if and only if owner decides
+- [x] CC §2 checks pass if any code/tests changed; Phase 5 committed artifacts unchanged
 
-**For later phases:** *(agent fills this in: final compared results, recommendation, artifact paths, and the recorded T-D1/D1 outcome or pending state.)*
+**For later phases:**
+- **For Phase 6 (and owner T-D1/D1):** D1 remains **provisional/pending owner review** in `ai/plans/plan.md` §5 (`ast-60s`). Do not start Phase 6 until the owner records D1; if changed, update `ai/plans/plan.md` §5 and `benches/results/tuning/report.md`/`summary.json` pending state to match the decision and evidence.
+- **For Phase 6:** primary-goal evidence (min human FP at ~80–90% AI recall, dev-derived 85% point, held-out 40/40) favors `fakeprint` baseline (1 FP / 8 FN) over tuned in-scope configs; best tuned is `ast-60s` AST-1c/AST-2a end (8/6, improved from baseline ast 13/8 but worse FPR@95% recall 0.55 vs 0.45). `spectttra-alpha` baseline/STA-1b 8–9 FP; beta/gamma behind. All directional (400 tracks, skewed/unknown generators, saturated dev calibration).
+- **For future tuning (if reopened):** loop-fill gave no held-out FP reduction at the goal point despite small dev gains (26 short tracks, label-skewed); multi-window aggregation remains deferred. `fakeprint` was not placement/fill-tuned.
+- **Artifacts:** consolidated `benches/results/tuning/report.md`, `benches/results/tuning/summary.json`; T1/T2 `placement-sweep-summary.{json,md}`, `loop-fill-summary.{json,md}`; Phase 5 baseline unchanged. Raw JSONL git-ignored under `benches/results/raw/` and `benches/results/tuning/<CFG>/raw/`.

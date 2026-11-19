@@ -1,0 +1,237 @@
+{
+  "criterion": {
+    "acceptable_recall_band": [0.8, 0.9],
+    "note": "Goal metric uses each config's dev-derived raw-score operating point at 85% AI recall (FPR-at-target-recall invariant to monotonic temperature scaling). Held-out test for tuning configs reported once per chosen/reported config; baseline goal-point counts reported for comparability on the same fixed split.",
+    "primary": "minimize human false flags at AI recall 0.85 (dev-derived raw-score operating point)",
+    "target_recall": 0.85
+  },
+  "dataset": {
+    "ai_tracks": 200,
+    "human_tracks": 200,
+    "manifest": "test-audio/test-songs.csv",
+    "notes": "Genre-skewed human set (podcast-derived), untargeted/unknown-generator AI set; directional/conditional results.",
+    "seed": 42,
+    "split_strategy": "fixed_dev_test",
+    "total_tracks": 400
+  },
+  "decision": {
+    "d1_current_plan_record": "ast-60s (provisional, recorded 2026-11-19 in ai/plans/plan.md §5)",
+    "recommendation": "If prioritizing the stated goal (~80-90% AI recall), evidence favors changing D1 to fakeprint (1/40 held-out human FP at goal point) with caveats (poor at ~95% recall, weak calibration, not tuned). If prioritizing ~95% recall, ast-60s remains stronger at that point but tuning goal is misaligned; tuned ast-60s AST-1c improves ast goal-point behavior (8/40 FP) vs baseline ast (13/40) while regressing FPR@95% recall. Owner decision required.",
+    "t_d1_status": "pending_owner_decision"
+  },
+  "evidence": {
+    "loop_fill_summary_json": "benches/results/tuning/loop-fill-summary.json",
+    "loop_fill_summary_md": "benches/results/tuning/loop-fill-summary.md",
+    "phase5_calibration": "benches/results/calibration.json",
+    "phase5_report": "benches/results/report.md",
+    "phase5_summary": "benches/results/summary.json",
+    "placement_sweep_summary_json": "benches/results/tuning/placement-sweep-summary.json",
+    "placement_sweep_summary_md": "benches/results/tuning/placement-sweep-summary.md",
+    "tuning_report": "benches/results/tuning/report.md"
+  },
+  "phase5_baselines": {
+    "ast-60s": {
+      "config": "fixed-25s, 60s, zero-pad (Phase 5)",
+      "dev_raw_goal_point": {
+        "ai_recall": 0.85,
+        "human_fpr": 0.425,
+        "roc_auc": 0.819765625,
+        "separation_margin": -0.012197792530059814,
+        "threshold": 0.987798273563385
+      },
+      "test_goal_point_at_dev_threshold": {
+        "ai_false_negatives": 8,
+        "ai_total": 40,
+        "human_false_positives": 13,
+        "human_total": 40
+      },
+      "test_metrics": {
+        "ece": 0.15686458503328196,
+        "f1": 0.7631578947368421,
+        "fpr_at_95_recall": 0.45,
+        "log_loss": 0.5623304531236248,
+        "pr_auc": 0.8809907188917006,
+        "roc_auc": 0.8578125,
+        "total_score_seconds": 272.37816348983324
+      }
+    },
+    "fakeprint": {
+      "config": "fixed offset/default, 10s, zero-pad (Phase 5); not in T1/T2 tuning scope",
+      "dev_raw_goal_point": {
+        "ai_recall": 0.85,
+        "human_fpr": 0.00625,
+        "roc_auc": 0.9683203125,
+        "separation_margin": -0.9474964141845703,
+        "threshold": 6.562471389770508e-05
+      },
+      "test_goal_point_at_dev_threshold": {
+        "ai_false_negatives": 8,
+        "ai_total": 40,
+        "human_false_positives": 1,
+        "human_total": 40
+      },
+      "test_metrics": {
+        "ece": 0.32403749601092063,
+        "f1": 0.8767123287671232,
+        "fpr_at_95_recall": 1.0,
+        "log_loss": 0.7955672543243145,
+        "pr_auc": 0.9271101380674099,
+        "roc_auc": 0.923125,
+        "total_score_seconds": 1.854143775854027
+      }
+    },
+    "spectttra-alpha-120s": {
+      "config": "fixed-25s, 120s, zero-pad (Phase 5)",
+      "dev_raw_goal_point": {
+        "ai_recall": 0.85,
+        "human_fpr": 0.275,
+        "roc_auc": 0.851328125,
+        "separation_margin": -5.0224127769470215,
+        "threshold": -1.6481451988220215
+      },
+      "test_goal_point_at_dev_threshold": {
+        "ai_false_negatives": 8,
+        "ai_total": 40,
+        "human_false_positives": 8,
+        "human_total": 40
+      },
+      "test_metrics": {
+        "ece": 0.07033544167746428,
+        "f1": 0.8,
+        "fpr_at_95_recall": 0.725,
+        "log_loss": 0.4672049721192296,
+        "pr_auc": 0.8803794193714269,
+        "roc_auc": 0.853125,
+        "total_score_seconds": 9.446880142946611
+      }
+    },
+    "spectttra-beta-120s": {
+      "config": "fixed-25s, 120s, zero-pad (Phase 5)",
+      "dev_raw_goal_point": {
+        "ai_recall": 0.85,
+        "human_fpr": 0.49375,
+        "roc_auc": 0.79203125,
+        "separation_margin": -9.205345630645752,
+        "threshold": -4.199126720428467
+      },
+      "test_goal_point_at_dev_threshold": {
+        "ai_false_negatives": 3,
+        "ai_total": 40,
+        "human_false_positives": 22,
+        "human_total": 40
+      },
+      "test_metrics": {
+        "ece": 0.15047881431305135,
+        "f1": 0.7105263157894737,
+        "fpr_at_95_recall": 0.675,
+        "log_loss": 0.5890106616456668,
+        "pr_auc": 0.8344883293258591,
+        "roc_auc": 0.810625,
+        "total_score_seconds": 6.01362772982975
+      }
+    },
+    "spectttra-gamma-120s": {
+      "config": "fixed-25s, 120s, zero-pad (Phase 5)",
+      "dev_raw_goal_point": {
+        "ai_recall": 0.85,
+        "human_fpr": 0.575,
+        "roc_auc": 0.7469140625,
+        "separation_margin": -6.367335796356201,
+        "threshold": -3.142315149307251
+      },
+      "test_goal_point_at_dev_threshold": {
+        "ai_false_negatives": 7,
+        "ai_total": 40,
+        "human_false_positives": 25,
+        "human_total": 40
+      },
+      "test_metrics": {
+        "ece": 0.09901871343713302,
+        "f1": 0.6666666666666666,
+        "fpr_at_95_recall": 0.9,
+        "log_loss": 0.6403759265261,
+        "pr_auc": 0.732172435516212,
+        "roc_auc": 0.694375,
+        "total_score_seconds": 5.117734093990293
+      }
+    }
+  },
+  "tuning": {
+    "loop_fill": {
+      "ast-60s": {
+        "delta_dev_fpr_at_0.85": 0.0,
+        "delta_test_fpr_at_95_recall": 0.0,
+        "delta_test_roc_auc": 0.0,
+        "fill_affected": {"ai_generated": 1, "human": 4, "total": 5},
+        "loop_fill_config": "AST-2a",
+        "placement": "end",
+        "selected_zero_pad_config": "AST-1c",
+        "test_goal_point_human_fp_ai_fn": {"loop_fill": [8, 6], "zero_pad": [8, 6]}
+      },
+      "spectttra-alpha-120s": {
+        "delta_dev_fpr_at_0.85": -0.05,
+        "delta_test_fpr_at_95_recall": 0.0,
+        "delta_test_roc_auc": 0.0,
+        "fill_affected": {"ai_generated": 9, "human": 17, "total": 26},
+        "loop_fill_config": "STA-2a",
+        "placement": "middle",
+        "selected_zero_pad_config": "STA-1b",
+        "test_goal_point_human_fp_ai_fn": {"loop_fill": [9, 4], "zero_pad": [9, 4]}
+      },
+      "spectttra-beta-120s": {
+        "delta_dev_fpr_at_0.85": -0.03125,
+        "delta_test_fpr_at_95_recall": 0.0,
+        "delta_test_roc_auc": 0.001875,
+        "fill_affected": {"ai_generated": 9, "human": 17, "total": 26},
+        "loop_fill_config": "STB-2a",
+        "placement": "middle",
+        "selected_zero_pad_config": "STB-1b",
+        "test_goal_point_human_fp_ai_fn": {"loop_fill": [20, 3], "zero_pad": [20, 3]}
+      },
+      "spectttra-gamma-120s": {
+        "delta_dev_fpr_at_0.85": -0.04375,
+        "delta_test_fpr_at_95_recall": 0.0,
+        "delta_test_roc_auc": 0.003125,
+        "fill_affected": {"ai_generated": 9, "human": 17, "total": 26},
+        "loop_fill_config": "STG-2a",
+        "placement": "start",
+        "selected_zero_pad_config": "STG-1a",
+        "test_goal_point_human_fp_ai_fn": {"loop_fill": [22, 6], "zero_pad": [22, 6]}
+      }
+    },
+    "placement_selected": {
+      "ast-60s": {
+        "baseline_dev_fpr_at_0.85": 0.425,
+        "config": "AST-1c",
+        "dev_raw_goal_point": {"ai_recall": 0.85, "human_fpr": 0.2125, "roc_auc": 0.88640625},
+        "placement": "end",
+        "test_goal_point_at_dev_threshold": {"ai_false_negatives": 6, "human_false_positives": 8},
+        "test_metrics": {"ece": 0.0860638115150562, "fpr_at_95_recall": 0.55, "pr_auc": 0.8932509269631439, "roc_auc": 0.875625}
+      },
+      "spectttra-alpha-120s": {
+        "baseline_dev_fpr_at_0.85": 0.275,
+        "config": "STA-1b",
+        "dev_raw_goal_point": {"ai_recall": 0.85, "human_fpr": 0.25625, "roc_auc": 0.8833203125},
+        "placement": "middle",
+        "test_goal_point_at_dev_threshold": {"ai_false_negatives": 4, "human_false_positives": 9},
+        "test_metrics": {"ece": 0.1372913905855394, "fpr_at_95_recall": 0.525, "pr_auc": 0.877125504762403, "roc_auc": 0.880625}
+      },
+      "spectttra-beta-120s": {
+        "baseline_dev_fpr_at_0.85": 0.49375,
+        "config": "STB-1b",
+        "dev_raw_goal_point": {"ai_recall": 0.85, "human_fpr": 0.45, "roc_auc": 0.8028125},
+        "placement": "middle",
+        "test_goal_point_at_dev_threshold": {"ai_false_negatives": 3, "human_false_positives": 20},
+        "test_metrics": {"ece": 0.1399510654887341, "fpr_at_95_recall": 0.5, "pr_auc": 0.8312806530870058, "roc_auc": 0.835625}
+      },
+      "spectttra-gamma-120s": {
+        "baseline_dev_fpr_at_0.85": 0.575,
+        "config": "STG-1a",
+        "dev_raw_goal_point": {"ai_recall": 0.85, "human_fpr": 0.54375, "roc_auc": 0.7772265625},
+        "placement": "start",
+        "test_goal_point_at_dev_threshold": {"ai_false_negatives": 6, "human_false_positives": 22},
+        "test_metrics": {"ece": 0.08325735528739103, "fpr_at_95_recall": 0.725, "pr_auc": 0.749574324084656, "roc_auc": 0.735625}
+      }
+    }
+  }
+}
