@@ -23,6 +23,25 @@ _EXAMPLES = (
     "  aidetect score track.mp3 --cascade --json"
 )
 
+_JSON_HELP = "emit exactly one JSON object on stdout (default: short label/probability line)"
+_CASCADE_HELP = "use the D1 two-stage conservative policy (nested primary/second_opinion in JSON)"
+
+_USAGE_ORDER = (
+    "usage order:\n"
+    "  aidetect score <source> [flags]\n"
+    "Flags belong to the score command and must come after `score`; within that command\n"
+    "they may appear before or after <source>. Root-level flags are rejected:\n"
+    "  aidetect score track.mp3 --json --cascade   # ok\n"
+    "  aidetect --json score track.mp3            # rejected"
+)
+
+_SCORING_FLAGS = f"scoring flags:\n  --json      {_JSON_HELP}\n  --cascade   {_CASCADE_HELP}"
+
+_OUTPUT_CONTRACT = (
+    "JSON goes to stdout; diagnostics and errors go to stderr.\n"
+    "Errors exit 1 (argument errors exit 2)."
+)
+
 
 def _is_url(source: str) -> bool:
     return urlparse(source).scheme.lower() in _URL_SCHEMES
@@ -38,9 +57,15 @@ def _build_parser() -> argparse.ArgumentParser:
         description=(
             "AI-generated music detection with calibrated tri-state labels "
             "(human, uncertain, ai_generated).\n"
-            "Score one local audio file or an http(s) URL."
+            "Score one local audio file or an http(s) URL with the `score` command."
         ),
-        epilog=f"{_EXAMPLES}\n\nRun 'aidetect score --help' for scoring options.",
+        epilog=(
+            f"{_USAGE_ORDER}\n\n"
+            f"{_SCORING_FLAGS}\n\n"
+            f"{_EXAMPLES}\n\n"
+            f"{_OUTPUT_CONTRACT}\n"
+            "Run 'aidetect score --help' for the scoring help screen."
+        ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     commands = parser.add_subparsers(dest="command", required=True)
@@ -48,25 +73,12 @@ def _build_parser() -> argparse.ArgumentParser:
         "score",
         help="score one local audio file or http(s) URL",
         description="Score one local audio file or http(s) URL.",
-        epilog=(
-            f"{_EXAMPLES}\n\n"
-            "JSON goes to stdout; diagnostics and errors go to stderr.\n"
-            "Errors exit 1 (argument errors exit 2)."
-        ),
+        epilog=f"{_EXAMPLES}\n\n{_OUTPUT_CONTRACT}",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     score.add_argument("source", help="local audio path or http(s) URL")
-    score.add_argument(
-        "--json",
-        action="store_true",
-        dest="as_json",
-        help="emit exactly one JSON object on stdout (default: short label/probability line)",
-    )
-    score.add_argument(
-        "--cascade",
-        action="store_true",
-        help="use the D1 two-stage conservative policy (nested primary/second_opinion in JSON)",
-    )
+    score.add_argument("--json", action="store_true", dest="as_json", help=_JSON_HELP)
+    score.add_argument("--cascade", action="store_true", help=_CASCADE_HELP)
     return parser
 
 

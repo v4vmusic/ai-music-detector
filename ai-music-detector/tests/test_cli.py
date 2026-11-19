@@ -138,6 +138,27 @@ def test_cli_root_help_lists_command_flags_and_examples(
     assert "https://example.com/track.mp3" in out
 
 
+def test_cli_root_help_explains_usage_ordering(capsys: pytest.CaptureFixture[str]) -> None:
+    with pytest.raises(SystemExit) as exc:
+        main(["--help"])
+
+    assert exc.value.code == 0
+    out = capsys.readouterr().out
+    assert "usage order" in out
+    assert "aidetect score <source> [flags]" in out
+    assert "must come after `score`" in out
+    assert "aidetect --json score track.mp3" in out
+    assert "# rejected" in out
+
+
+def test_cli_rejects_flags_before_the_score_command(capsys: pytest.CaptureFixture[str]) -> None:
+    with pytest.raises(SystemExit) as exc:
+        main(["--json", "score", "track.mp3"])
+
+    assert exc.value.code == 2
+    assert "unrecognized arguments: --json" in capsys.readouterr().err
+
+
 def test_cli_score_help_lists_flags_and_examples(capsys: pytest.CaptureFixture[str]) -> None:
     with pytest.raises(SystemExit) as exc:
         main(["score", "--help"])
