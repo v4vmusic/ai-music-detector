@@ -1,7 +1,7 @@
 # Coding Contract
 
 **Applies to:** every agent and human contributor in `/home/hapa/k/code/ai-music-dector-root`.
-**Status:** binding. Read this file and `ai/reference/discussion.md` before writing any code.
+**Status:** binding. Read this file and the plan (`ai/plans/plan.md`) before writing any code.
 **Changes:** only with explicit approval from the project owner. Never silently reinterpret a rule.
 
 This contract fixes conventions *now* so that work from different agents remains interchangeable. It is not an implementation plan.
@@ -15,15 +15,18 @@ This contract fixes conventions *now* so that work from different agents remains
 ├── pyproject.toml              # single source of truth for deps + tool config
 ├── uv.lock                     # committed lockfile
 ├── benches/                    # model experiments and benchmark harness (first)
+│   ├── README.md               # setup, commands, how to rerun, where results go
 │   ├── _shared/                # reusable bench helpers
 │   ├── backends/               # one module per candidate model
 │   └── tests/                  # tests for bench logic
 ├── test-audio/                 # labeled audio + CSV manifest; never committed
 ├── ai-music-detector/          # the library, created only after bench results
 │   └── src/aidetect/           # import name: aidetect
-└── ai/                         # docs, decisions, contracts only — no runtime code
+└── ai/                         # docs, plans, prompts, contracts only — no runtime code
     ├── contracts/
-    └── reference/
+    ├── plans/
+    ├── prompts/
+    └── reference/              # historical log only; not a source of truth
 ```
 
 - **Bench first, library second.** Model testing happens in `benches/`. The library in `ai-music-detector/` is created only after bench results inform the design.
@@ -37,11 +40,14 @@ This contract fixes conventions *now* so that work from different agents remains
 A task is not done until all applicable commands pass:
 
 ```bash
-uv run pytest -q                                          # unit + integration-by-default
-uv run ruff check . && uv run ruff format --check .       # lint and format
-uv run mypy benches ai-music-detector/src                 # static types
-uv run pytest --cov=aidetect --cov-fail-under=80          # library only, once it exists
+uv run pytest -q                                    # offline tests; marked tests excluded (§4.6)
+uv run ruff check . && uv run ruff format --check . # lint and format
+uv run mypy benches                                 # Phases 0–5
+uv run mypy benches ai-music-detector/src           # Phase 6+, once the library exists
+uv run pytest --cov=aidetect --cov-fail-under=80    # Phase 6+ only; library modules only
 ```
+
+`ai-music-detector/src` does not exist before Phase 6 — do not include it in earlier mypy commands. Coverage measures `aidetect` library modules only; bench helpers are tested but not coverage-gated.
 
 Settings live in `pyproject.toml` (line length 100, double quotes, trailing commas, sorted imports). Do not override them per-file without a comment explaining why.
 
@@ -64,12 +70,13 @@ Settings live in `pyproject.toml` (line length 100, double quotes, trailing comm
 3. **Bug fixes get a regression test first.**
 4. **Tests describe behaviour, not implementation.** Test observable outputs and contracts, not private internals.
 5. **Default tests are deterministic and offline.** No network, no GPU, no real model downloads. Use fixtures, fakes, and dependency injection around heavy calls.
-6. **Slow, GPU, or network tests** are marked `@pytest.mark.integration` or `@pytest.mark.slow` and excluded from the default run. They must still be runnable explicitly.
+6. **Slow, GPU, or network tests** are marked `@pytest.mark.integration`, `@pytest.mark.slow` or `@pytest.mark.gpu`. The default `pytest -q` run excludes all marked tests; run them explicitly when the phase calls for it.
 7. **Coverage gate:** 80% line coverage on library modules once `aidetect` exists. Bench scripts are not coverage-gated, but their shared helpers in `benches/_shared/` are tested.
 8. Do not use `pytest.skip` to hide a failing test. Do not weaken assertions to make a test pass.
 9. Commit after each green red-green-refactor cycle, not a pile of unrelated changes at the end.
+10. **Test-first exemptions:** configuration, scaffolding, test fixtures, documentation and pure research have no runtime behaviour to test and need no failing test first. Every behaviour change and every bug fix still does (CC §4.1–4.3).
 
-Agent loop for every task: read contract → write test → run it and confirm failure → implement → run full suite + lint + types → refactor → commit.
+Agent loop for every task: read contract → write test (unless exempt under §4.10) → run it and confirm failure → implement → run full suite + lint + types → refactor → commit.
 
 ## 5. DRY rules
 
@@ -95,12 +102,13 @@ https://example.com/feed/ep12.mp3,ai_generated
 - Header required. `label` is exactly `human` or `ai_generated`.
 - `path` is absolute, relative to the manifest's directory, or `http(s)://`.
 - Extra columns are ignored. Duration is derived from audio, not supplied.
+- Bench phases before Phase 7 use **local paths only**: skip manifest URLs with a warning. Safe URL fetching is a Phase 7 library adapter, not bench work.
 
 ### Audio handed to models
 
 - `16_000` Hz, mono, `float32` NumPy array, values in `[-1.0, 1.0]`.
 - Each backend declares its own required window length; the shared decoder produces windows, never the backend.
-- Short audio is zero-padded or rejected by an explicit, tested policy — never silently truncated.
+- **Short tracks:** zero-pad to the required window length and emit a `short_track_padded` warning; raise `AudioDecodeError` for tracks under 5 s. Never silently truncate.
 
 ### Backend interface (defined in `benches/` first, promoted to the library)
 
@@ -131,23 +139,24 @@ https://example.com/feed/ep12.mp3,ai_generated
 - Stay inside the assigned scope. If a task requires changing this contract, the repository layout, or shared interfaces, stop and ask instead of improvising.
 - Never overwrite or delete another agent's work to "clean up". Resolve conflicts by asking.
 - No force pushes, no history rewriting, no destructive git commands without explicit permission.
-- Architecture decisions go in `ai/reference/discussion.md`, not in code comments or commit messages alone.
+- Architecture decisions go in the plan (`ai/plans/plan.md`), not in code comments or commit messages alone. `ai/reference/discussion.md` is a historical log and is not a source of truth.
 
 ## 10. Bench-specific rules
 
+- `benches/README.md` is required from Phase 0: setup, every bench command, how to rerun with the same seed, and result locations. Update it whenever a command changes.
 - Bench scripts are standalone: `uv run python benches/<name>.py --manifest <csv> --out <dir>`.
 - Save raw per-track scores as JSONL and summaries as JSON/CSV. Record model revision, package versions, config hash, seed, and wall/GPU timing.
-- Deterministic seeds everywhere. Never tune thresholds or calibrate on the split being reported.
+- Deterministic seeds everywhere. CPU reruns should match exactly; GPU reruns may differ slightly from floating-point nondeterminism — use a small absolute tolerance (1e-4 by default) and record any larger drift. Never tune thresholds or calibrate on the split being reported.
 - Benchmark results are evidence, not production code. Do not promote a model wrapper into the library until its bench tests are green and its limitations are documented.
 
 ## 11. Definition of done
 
 A task is complete when:
 
-- [ ] A failing test was written before the implementation.
-- [ ] `uv run pytest -q`, `ruff check`, `ruff format --check`, and `mypy` pass.
-- [ ] Coverage gate passes for library code (once it exists).
+- [ ] A failing test was written first for every behaviour change and bug fix (§4.10 exemptions excluded).
+- [ ] `uv run pytest -q`, `ruff check`, `ruff format --check`, and `mypy` on the applicable targets pass (§2).
+- [ ] Coverage gate passes for `aidetect` library modules (Phase 6+ only; bench helpers are excluded).
 - [ ] No new dependency, large file, secret, or generated artifact was committed.
 - [ ] Existing shared behaviour was reused; the rule of three was applied before creating new abstractions.
-- [ ] Relevant docs/contracts were updated, and decisions were recorded in `ai/reference/discussion.md`.
+- [ ] Relevant docs/contracts were updated; decisions are recorded in the plan where the phase asks for them.
 - [ ] The commit is small, conventionally named, and contains only this task.

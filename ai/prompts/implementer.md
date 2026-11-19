@@ -9,7 +9,7 @@ Implement `ai/plans/plan.md` — **Phase `<N>`**. *(The owner fills in the phase
 The goal is a standalone library that any app can call: audio file or URL in, calibrated probability in `[0, 1]` that the track was AI-generated, with per-model detail alongside it.
 
 - Workspace: `/home/hapa/k/code/ai-music-dector-root`. Paths below are relative to it; commands run from it.
-- `benches/` is the experiment area. `ai-music-detector/` is the library, created only **after** bench results. `ai/` contains contracts, prompts and reference docs — no runtime code.
+- `benches/` is the experiment area. `ai-music-detector/` is the library, created only **after** bench results. `ai/` contains contracts, plans, prompts and a historical reference log — no runtime code.
 - `test-audio/` holds the labeled CSV manifest and audio. It is never committed.
 - Stack: Python 3.10 managed by `uv`; `pytest`, `ruff`, `mypy`; ffmpeg; PyTorch 2.6 + CUDA 12.4 already installed and verified. Models come from Hugging Face / the `sonics` package. No new language or framework unless the plan approves it.
 
@@ -27,9 +27,9 @@ If documents contradict each other or the phase, ask before building on the cont
 
 - **Owner decisions:** the contract and the plan record the owner's decisions. If a task would violate one, fit the rules or ask. Do **not** edit them to make your change fit unless the owner asks. Open or unclear rules: ask, don't guess.
 - **Scope:** bench phases work only in `benches/`. Library phases work only in `ai-music-detector/`. Do not create a polished library API during a bench phase, and do not leave bench-only helpers behind when building the library — promote shared code instead.
-- **Test-first** (CC §4): write the failing test before the code that makes it pass; red → green → refactor; regression test for every bug fix; default tests offline, deterministic and free of GPU/network/model downloads; heavy calls behind fakes and dependency injection. Never delete, skip or weaken a test to make a change pass.
+- **Test-first** (CC §4): write the failing test before the code that makes it pass; red → green → refactor; regression test for every bug fix; default tests offline, deterministic and free of GPU/network/model downloads; heavy calls behind fakes and dependency injection. Config, scaffolding, fixtures, docs and pure research are exempt (CC §4.10). Never delete, skip or weaken a test to make a change pass.
 - **DRY** (CC §5): use the **rule of three** — tolerate duplication until the same logic appears three times, then extract. No speculative abstractions, no reimplementing an existing helper.
-- **Shared contracts** (CC §6): CSV manifest is `path,label` with labels exactly `human` / `ai_generated`; model input is 16 kHz mono float32; every backend exposes `load()`, `score()`, `metadata()` and returns the same fields; no backend does its own file/URL I/O.
+- **Shared contracts** (CC §6): CSV manifest is `path,label` with labels exactly `human` / `ai_generated`; model input is 16 kHz mono float32 (zero-pad short tracks with a `short_track_padded` warning, reject under 5 s); every backend exposes `load()`, `score()`, `metadata()` and returns the same fields; no backend does its own file/URL I/O. Bench phases use local manifest paths only; skip URLs with a warning (safe URL fetching is Phase 7).
 - **Model work:** download weights only when the phase calls for it, into the cache controlled by `AIDETECT_CACHE_DIR`. Before the first download or GPU run, state the expected download size, free disk and expected VRAM. Never commit weights or audio.
 - **Dependencies:** only those already available or named in the plan/CC. Anything else needs owner approval, with a one-line justification.
 - **Data:** run output, raw benchmark results, audio and weights go in git-ignored folders. Only what the plan names is committed.
@@ -44,9 +44,9 @@ For phases that measure or compare models:
 
 - **Criteria first:** metrics and pass criteria are fixed before the run, in the plan or by the owner. Never change them, the data or the setup after seeing results to make a method pass or win; report the need and rerun after agreement.
 - **Report what was measured:** negative and mixed results as plainly as positive ones. Never cherry-pick a seed or run.
-- **Reproducible:** seeded runs; record model revision, package versions, config hash, raw per-track scores (JSONL), summary (JSON/CSV), and wall/GPU timing. The bench README must say how to rerun.
+- **Reproducible:** seeded runs; record model revision, package versions, config hash, raw per-track scores (JSONL), summary (JSON/CSV), and wall/GPU timing. `benches/README.md` is required from Phase 0 and must say how to rerun (CC §10). CPU reruns should match exactly; for GPU models allow a small absolute tolerance (1e-4) and report larger drift.
 - **No leakage:** calibrate and tune thresholds only on dev folds; never on the split being reported.
-- **Where results go:** raw JSONL in git-ignored `benches/results/raw/`. Commit only the summary the plan names, and keep findings in the bench README.
+- **Where results go:** raw JSONL in git-ignored `benches/results/raw/`. Commit only what the plan names (`summary.json`, `report.md`, `calibration.json`) and keep rerun instructions in the bench README.
 
 ## How the owner works
 
@@ -75,11 +75,11 @@ For phases that measure or compare models:
    ```bash
    uv run pytest -q
    uv run ruff check . && uv run ruff format --check .
-   uv run mypy benches ai-music-detector/src
-   uv run pytest --cov=aidetect --cov-fail-under=80   # once the library exists
+   uv run mypy benches                # add ai-music-detector/src from Phase 6
+   uv run pytest --cov=aidetect --cov-fail-under=80   # Phase 6+ only; library modules only
    ```
 
-   All must pass, judged by each command's own exit status, never output piped through another command.
+   Before Phase 6, `ai-music-detector/src` does not exist — do not add it to the mypy command. All applicable commands must pass, judged by each command's own exit status, never output piped through another command.
 4. Update the documentation the phase requires: README commands and bench README. Then write the phase's **For later phases** note in the plan (see below).
 5. **Update the checkboxes** in the plan, including any coverage list items this phase completes. The phase is done when its work items are ticked and all checks pass: then tick its line in the plan's phase overview too.
 6. Walk through the phase's **For human Testing** steps yourself as far as you can and fix anything that doesn't work as described.

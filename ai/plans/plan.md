@@ -14,6 +14,14 @@ The owner assigns one phase to one fresh agent. Read **sections 1–3** and **on
 
 **Labels:** CSV at `test-audio/manifest.csv` (or another owner-named path) with exactly two columns `path,label`; labels exactly `human` or `ai_generated`; paths absolute, relative to the manifest directory, or `http(s)://`; extra columns ignored; duration derived from audio. Supply may be small (~20–40 per class): if fewer than ~50 per class, use stratified k-fold and report variation across folds; do not pad one class with duplicates; treat results as directional. Generator identity is unknown, so only binary performance can be measured — cross-generator generalization cannot be claimed.
 
+**Thresholds:** Phase 5 exports fitted thresholds from dev data; fixed fallbacks are `human < 0.35`, `uncertain` 0.35–0.65, `ai_generated > 0.65`. Edges belong to `uncertain` (`p < low` → human, `p > high` → ai_generated, otherwise uncertain). The fallback applies when dev labels are absent or calibration is degenerate.
+
+**Short tracks:** zero-pad to the required window and emit a `short_track_padded` warning; reject tracks under 5 s with `AudioDecodeError`.
+
+**Library backends:** ship all bench-validated backends with one default chosen at D1; select others by `model_id`. Backends that failed or were not benchmarked are not shipped.
+
+**Bench inputs:** local manifest paths only until Phase 7; skip URLs with a warning.
+
 **Out of scope:** worker queue, database, RSS ingestion, feed heuristics, web/UI filters, HTTP wrapper.
 
 ## 2. Model candidates
@@ -35,6 +43,8 @@ Benchmark all *available* models; "all four" is qualified by these constraints.
 - Contract rules: TDD red → green → refactor, test first for every behaviour and bug fix; DRY by the **rule of three**; offline deterministic default tests with fakes; GPU/network tests marked and run explicitly; ffmpeg via argument lists with `shell=False`; URL inputs reject private addresses and cap redirects, timeouts and bytes; conventional commits; no push without permission.
 - Benchmark integrity: criteria fixed before a run; report negative results plainly; no tuning on the reported split; seeded runs; raw per-track JSONL with model revision, versions, config hash and timings.
 - Owner interaction: markdown checkbox questionnaires, never a question-asking tool; blank answer is not consent; "don't make changes yet" means discuss only.
+- Test-first exemptions (CC §4.10): config, scaffolding, fixtures, docs and pure research; every behaviour change and bug fix still needs a red test first.
+- Bench manifests use local paths only until Phase 7 (CC §6); URLs are skipped with a warning.
 
 ## 4. Phase overview
 
@@ -50,9 +60,9 @@ Benchmark all *available* models; "all four" is qualified by these constraints.
 ## 5. Decision gates
 
 - **D2 (after Phase 4):** owner decides whether MusicDET is dropped, attempted via zero-shot training on our human tracks, or deferred. No agent decides alone.
-- **D1 (after Phase 5):** owner chooses the default backend from measured results. Phase 6 does not start until D1 is recorded here.
+- **D1 (after Phase 5):** owner chooses the default backend from measured results. Phase 6 does not start until D1 is recorded here. D2 does not block Phase 5: the harness compares available backends whether or not MusicDET proceeds, and D1 considers only backends actually benchmarked.
 
-Record a gate decision as one dated line with the choice; the benchmark report holds the evidence.
+Record a gate decision as one dated line with the choice; the benchmark report holds the evidence. If the labeled CSV never arrives, record D1 as "pending — harness only" instead of choosing a model.
 
 ---
 
@@ -64,14 +74,14 @@ Record a gate decision as one dated line with the choice; the benchmark report h
 
 **Goal:** a runnable `benches/` skeleton with shared code for later backends: manifest loading, audio window decoding, shared result types. No models, no downloads, no GPU, no network.
 
-**In scope:** root `pyproject.toml` with uv-managed dev deps (pytest, pytest-cov, ruff, mypy) and tool config; `uv.lock`; `.gitignore` for `.venv/`, `test-audio/`, `benches/results/`, caches. `benches/_shared/manifest.py` (load `path,label` CSV, validate labels, resolve relative paths against CSV directory). `benches/_shared/audio.py` (local file → ffmpeg → 16 kHz mono float32, offset and window length; short-track policy explicit). `benches/_shared/types.py` (`AudioWindow`, `ModelOutput`, `ModelMetadata` per contract §6). `benches/_shared/registry.py` (model keys only). A script to decode one file and print shape and duration.
+**In scope:** root `pyproject.toml` with uv-managed runtime deps (e.g. `numpy`, with a one-line justification per CC §7) and dev deps (pytest, pytest-cov, ruff, mypy) plus tool config; `uv.lock`; `.gitignore` for `.venv/`, `test-audio/`, `benches/results/raw/`, caches (`benches/results/calibration.json`, `summary.json` and `report.md` are committed). `benches/README.md` with setup, the decode command, bench command conventions and result locations. `benches/_shared/manifest.py` (load `path,label` CSV, validate labels, resolve relative paths against the CSV directory, skip URLs with a warning). `benches/_shared/audio.py` (local file → ffmpeg → 16 kHz mono float32, offset and window length; short-track policy below). `benches/_shared/types.py` (`AudioWindow`, `ModelOutput`, `ModelMetadata` per contract §6; warnings include `short_track_padded`). `benches/_shared/registry.py` (model keys only). A script to decode one file and print shape and duration.
 
 **Out of scope:** model wrappers, URL inputs, metrics, the library.
 
 **Test-first checklist:**
-- [ ] Manifest rejects a bad label, accepts a valid row, resolves relative paths, ignores extra columns.
+- [ ] Manifest rejects a bad label, accepts a valid row, resolves relative paths, ignores extra columns, and skips a URL row with a warning.
 - [ ] Decode window math: sample count, offset, mono shape, float32 dtype, value range; generated WAV fixture only.
-- [ ] Short audio follows one documented policy (zero-pad or reject) and the test asserts it.
+- [ ] Tracks from 5 s up to the required window are zero-padded with a `short_track_padded` warning; tracks under 5 s raise `AudioDecodeError`.
 - [ ] Non-audio input raises `AudioDecodeError`, not an empty array.
 - [ ] Shared dataclasses reject out-of-range probabilities and missing required fields.
 
@@ -79,7 +89,7 @@ Generate fixtures in test code with the standard `wave` module; commit no binary
 
 **Implementation notes:** one tool config in the root `pyproject.toml`; use buffers rather than temp files where practical, clean up any temp file; apply the rule of three before adding helpers.
 
-**Artifacts:** `pyproject.toml`, `uv.lock`, `.gitignore`, `benches/_shared/*.py`, `benches/tests/`, decode script.
+**Artifacts:** `pyproject.toml`, `uv.lock`, `.gitignore`, `benches/README.md`, `benches/_shared/*.py`, `benches/tests/`, decode script.
 
 **Human testing:** create a 10 s synthetic WAV in `/tmp`; decode a 3 s window at 2 s offset and confirm shape `(48000,)`, float32; run all CC §2 checks.
 
@@ -135,11 +145,11 @@ Generate fixtures in test code with the standard `wave` module; commit no binary
 - [ ] Metadata records sample rate 16000, window length 120 and preprocessing version.
 - [ ] Load/unload leaves no module-level model handle (fake loader tracks calls).
 
-**Implementation notes:** keep `HFAudioClassifier.from_pretrained` in one place; reuse Phase 1's probability conversion when a third backend needs it (rule of three); GPU tests marked `@pytest.mark.gpu` and excluded from default runs.
+**Implementation notes:** keep `HFAudioClassifier.from_pretrained` in one place. Keep this backend's probability conversion local for now; it becomes shared in Phase 3 when the third backend needs it (CC §5.2). GPU tests are marked `@pytest.mark.gpu` and excluded from default runs.
 
 **Artifacts:** `benches/backends/spctttra.py`, tests, git-ignored JSONL per variant.
 
-**Human testing:** score one 120 s file per variant; confirm plausible probabilities and no OOM; confirm `nvidia-smi` memory returns to baseline between variants; seeded rerun matches.
+**Human testing:** score one 120 s file per variant; confirm plausible probabilities and no OOM; confirm `nvidia-smi` memory returns to baseline between variants; seeded rerun matches within an absolute tolerance of 1e-4 (record any larger GPU drift).
 
 **Done criteria:** [ ] checklist tests red then green; [ ] CC §2 checks pass; [ ] download size and VRAM reported; [ ] no weights committed; one variant loaded at a time.
 
@@ -164,11 +174,11 @@ Generate fixtures in test code with the standard `wave` module; commit no binary
 - [ ] Wrong input shape or sample rate raises the shared error.
 - [ ] Two consecutive `load()` calls do not duplicate the model in memory (fake loader tracks calls).
 
-**Implementation notes:** backend receives an `AudioWindow`; only one backend module imports `transformers`; reuse shared probability conversion per rule of three.
+**Implementation notes:** backend receives an `AudioWindow`; only one backend module imports `transformers`. This is the third backend, so promote the probability conversion to `benches/_shared/` here (rule of three, CC §5.2) and update the Phase 1 and Phase 2 backends to import it.
 
 **Artifacts:** `benches/backends/ast.py`, tests, git-ignored `benches/results/raw/ast.jsonl`.
 
-**Human testing:** score a file with AST and fakeprint; compare outputs qualitatively; seeded rerun matches; `nvidia-smi` memory returns to baseline.
+**Human testing:** score a file with AST and fakeprint; compare outputs qualitatively; seeded rerun matches within an absolute tolerance of 1e-4 (record larger GPU drift); `nvidia-smi` memory returns to baseline.
 
 **Done criteria:** [ ] checklist tests red then green; [ ] CC §2 checks pass; [ ] download size reported; [ ] weights not committed.
 
@@ -188,7 +198,7 @@ Generate fixtures in test code with the standard `wave` module; commit no binary
 
 **Test-first checklist:** if any helper code is written, its behaviour is test-first; pure research needs no tests. Do not fabricate a benchmark result.
 
-**Implementation notes:** cite sources read; separate verified facts from inference; report uncertainty plainly. Do not edit this plan — the owner records D2 in section 5.
+**Implementation notes:** cite sources read; separate verified facts from inference; report uncertainty plainly. Do not change any decision or gate text in this plan; you may tick this phase's checkboxes and write its "For later phases" note. The owner records D2 in section 5.
 
 **Artifacts:** `benches/musicdet-feasibility.md`.
 
@@ -202,11 +212,11 @@ Generate fixtures in test code with the standard `wave` module; commit no binary
 
 ### Phase 5 — Benchmark harness and report
 
-**Status:** [ ] not started  **Depends on:** Phases 1–3; Phase 4 findings; labeled CSV in `test-audio/`
+**Status:** [ ] not started  **Depends on:** Phases 1–3 and Phase 4 findings. The labeled CSV in `test-audio/` is needed for the real run only; build and test the harness with synthetic fixtures if it is absent.
 
 **Goal:** one reproducible comparison of all available backends on the owner's labeled set, with calibration and a recommendation. If the CSV is not present yet, build and test the harness with synthetic fixtures and leave the real run as a human step.
 
-**In scope:** unified `benches/run_bench.py` (all backends, folds/seed flags); stratified k-fold when fewer than ~50 per class, otherwise a fixed dev/test split; metrics ROC-AUC (primary), PR-AUC, FPR at ~95% recall, F1 at chosen threshold, ECE after temperature scaling; timing and peak VRAM; save raw per-track JSONL plus `benches/results/summary.json`; write `benches/results/report.md` with limitations (small set, unknown generators, older model generations). Produce **gate D1** for the owner.
+**In scope:** unified `benches/run_bench.py` (all backends, folds/seed flags); stratified k-fold when fewer than ~50 per class, otherwise a fixed dev/test split; metrics ROC-AUC (primary), PR-AUC, FPR at ~95% recall, F1 at chosen threshold, ECE after temperature scaling; timing and peak VRAM. Fit temperature scaling and thresholds on dev folds only, then write `benches/results/calibration.json` (temperature, low/high thresholds, model ids and revisions, config hash, dev metrics) for Phase 6; fall back to `0.35 / 0.65` when dev data is absent or calibration is degenerate. Save raw per-track JSONL plus `benches/results/summary.json`; write `benches/results/report.md` with limitations (small set, unknown generators, older model generations). Produce **gate D1** for the owner when real results exist.
 
 **Out of scope:** choosing the default model (owner decides), the library, threshold hardening beyond dev data.
 
@@ -214,16 +224,17 @@ Generate fixtures in test code with the standard `wave` module; commit no binary
 - [ ] Splitting is stratified, seeded and leak-free; tests use synthetic labels.
 - [ ] Each metric matches a hand-computed expected value on a tiny synthetic score set.
 - [ ] Temperature scaling improves or leaves unchanged log-loss on a synthetic dev set and never touches test scores.
+- [ ] Exported `calibration.json` contains the fitted temperature and thresholds; missing or degenerate dev scores produce the fixed `0.35 / 0.65` fallback and a warning.
 - [ ] Summary output contains model revisions, versions, config hash, seed and timing.
 - [ ] A failing backend run is recorded and excluded without corrupting the summary.
 
 **Implementation notes:** criteria are fixed before the run; do not change them after seeing results; report negative results; never cherry-pick a seed; raw JSONL stays git-ignored, only the summary/report the owner names is committed.
 
-**Artifacts:** `benches/run_bench.py`, `benches/_shared/eval.py`, tests, `benches/results/summary.json`, `benches/results/report.md`.
+**Artifacts:** `benches/run_bench.py`, `benches/_shared/eval.py`, tests, `benches/results/calibration.json`, `benches/results/summary.json`, `benches/results/report.md`.
 
-**Human testing:** run the full benchmark on `test-audio/manifest.csv`; check the report's limitations section; verify a seeded rerun produces the same summary.
+**Human testing:** run the full benchmark on `test-audio/manifest.csv`; check the report's limitations section and `calibration.json`; verify a seeded rerun produces the same summary (allow absolute 1e-4 drift for GPU models).
 
-**Done criteria:** [ ] checklist tests red then green; [ ] CC §2 checks pass; [ ] criteria documented before results; [ ] owner asked for D1.
+**Done criteria:** [ ] checklist tests red then green; [ ] CC §2 checks pass; [ ] criteria documented before results; [ ] `calibration.json` written with fitted values or documented fallback; [ ] owner asked for D1 when real results exist (otherwise D1 recorded as pending in section 5).
 
 **For later phases:** *(agent fills this in.)*
 
@@ -233,22 +244,22 @@ Generate fixtures in test code with the standard `wave` module; commit no binary
 
 **Status:** [ ] not started  **Depends on:** gate D1
 
-**Goal:** create `ai-music-detector/` with a clean, pip-installable library containing only what worked in the benches.
+**Goal:** create `ai-music-detector/` with a clean, pip-installable library containing all backends that were validated in the benches, with one default chosen at D1.
 
-**In scope:** `ai-music-detector/src/aidetect/` with public API (`Detector.from_pretrained`, `score_file`, `score_url`, `score_bytes`), `Result` dataclass, calibration and threshold logic, one default backend chosen at D1; promote shared bench code rather than reimplementing it; add build metadata to the existing root `pyproject.toml` pointing at `ai-music-detector/src` (no second pyproject); lazy heavy imports; `ai-music-detector/README.md`; package tests with a fake backend. Coverage gate applies from this phase.
+**In scope:** `ai-music-detector/src/aidetect/` with public API (`Detector.from_pretrained`, `score_file`, `score_bytes`), `Result` dataclass, calibration and threshold logic; `score_url` is added in Phase 7; all bench-validated backends selectable by `model_id` with one default chosen at D1; promote shared bench code rather than reimplementing it; declare heavy model dependencies as optional extras with one-line justifications (CC §7); add build metadata to the existing root `pyproject.toml` pointing at `ai-music-detector/src` (no second pyproject); lazy heavy imports; `ai-music-detector/README.md`; package tests with a fake backend. Coverage gate applies from this phase.
 
-**Out of scope:** URL safety, CLI, HTTP wrapper, worker/DB/RSS work.
+**Out of scope:** URL safety, CLI, HTTP wrapper, worker/DB/RSS work, and any backend that failed or was not benchmarked.
 
 **Test-first checklist:**
 - [ ] Public API with a fake backend returns probability in `[0, 1]`, label, model id/revision, windows, warnings, timings.
-- [ ] Threshold boundaries produce `human` / `uncertain` / `ai_generated` as specified, including exact edges.
-- [ ] Calibration transform is the same fitted object used at inference; no dev data leaks into scoring.
+- [ ] Threshold boundaries use the exported (or fallback) values as defined in section 1: `human` when `p < low`, `ai_generated` when `p > high`, otherwise `uncertain`; `p == low` and `p == high` are `uncertain`.
+- [ ] Inference loads the fitted temperature and thresholds from a packaged copy of `benches/results/calibration.json` and applies the same transform; no dev data is needed at scoring time. A missing calibration file uses the fixed fallback with a warning.
 - [ ] `import aidetect` does not import torch or any model library (lazy imports).
-- [ ] Unsupported backend or model id raises the shared error with an actionable message.
+- [ ] All bench-validated backends are selectable by `model_id`, the default equals the D1 choice, and an unsupported id raises the shared error with an actionable message.
 
 **Implementation notes:** `__all__` in every package `__init__.py`; fully annotated signatures; no mutable module globals; no `print()` in library code.
 
-**Artifacts:** `ai-music-detector/src/aidetect/`, tests, README, root pyproject build config.
+**Artifacts:** `ai-music-detector/src/aidetect/` (including the packaged calibration resource), tests, README, root pyproject build config.
 
 **Human testing:** `uv pip install -e .` in a fresh environment; import `aidetect` and score a local file with the default backend; confirm no torch import on plain import.
 
@@ -264,7 +275,7 @@ Generate fixtures in test code with the standard `wave` module; commit no binary
 
 **Goal:** finish the callable surface: safe URL and bytes inputs, CLI, cache configuration and documentation.
 
-**In scope:** `aidetect` URL adapter (http/https only, private/loopback/link-local rejection, redirect cap, connect/read timeouts, byte cap, audio validation); bytes adapter; CLI `aidetect score <path|url> --json` with JSON to stdout and diagnostics to stderr; `AIDETECT_CACHE_DIR` documented; README updated with commands and limitations.
+**In scope:** `aidetect` URL adapter exposed as `score_url` (http/https only, private/loopback/link-local rejection, redirect cap, connect/read timeouts, byte cap, audio validation); bytes adapter; CLI `aidetect score <path|url> --json` with JSON to stdout and diagnostics to stderr; `AIDETECT_CACHE_DIR` documented; README updated with commands and limitations.
 
 **Out of scope:** HTTP service, worker/DB/RSS/UI work.
 
