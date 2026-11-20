@@ -8,7 +8,7 @@ Implement `ai/plans/plan.md` — **Phase `7`**. *(The owner fills in the phase n
 
 The goal is a standalone library that any app can call: audio file or URL in, calibrated probability in `[0, 1]` that the track was AI-generated, with per-model detail alongside it.
 
-- Workspace: `/home/hapa/k/code/ai-music-dector-root`. Paths below are relative to it; commands run from it.
+- Workspace: `/home/hapa/k/code/ai-music-dector-root/ai-music-detector`. Paths below are relative to it; commands run from it.
 - `benches/` is the experiment area. `ai-music-detector/` is the library, created only **after** bench results. `ai/` contains contracts, plans, prompts and a historical reference log — no runtime code.
 - `test-audio/` holds the labeled CSV manifest and audio. It is never committed.
 - Stack: Python 3.10 managed by `uv`; `pytest`, `ruff`, `mypy`; ffmpeg; PyTorch 2.6 + CUDA 12.4 already installed and verified. Models come from Hugging Face / the `sonics` package. No new language or framework unless the plan approves it.

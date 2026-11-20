@@ -13,7 +13,7 @@ A standalone library that any app can call: given an audio file or a URL for an 
 - ffmpeg available
 - `uv` 0.6.5
 - NVIDIA GeForce RTX 3070 Ti Laptop GPU, 8192 MiB (driver 595.99.02)
-- Workspace `/home/hapa/k/code/ai-music-dector-root` currently contains only empty `ai-music-detector/` and `ai/` directories
+- Workspace `/home/hapa/k/code/ai-music-dector-root/ai-music-detector` currently contains only empty `ai-music-detector/` and `ai/` directories
 - PyTorch 2.6.0+cu124, CUDA build 12.4, cuDNN 9.1; GPU visible with ~7.8 GB free VRAM
 - Installed Python stack: `torch` (1.5 GB) + `nvidia` CUDA libs (3.7 GB) ≈ 5.2 GB; `transformers` 4.48.3, `accelerate`, `sklearn`, `safetensors`, `pandas`, `librosa`, `soundfile`, `scipy` present. Missing: `onnxruntime` (needed for fakeprint ONNX) and the `sonics` package (needed for SpecTTTra)
 - Disk: 938 GB volume, 45 GB free (96% used) — fine for model weights, not for large training datasets
@@ -23,7 +23,7 @@ A standalone library that any app can call: given an audio file or a URL for an 
 1. **First working slice:** scoring core + CLI/API. Benchmark *all four* candidate models first, then choose which one works best as the default. These are one slice in practice: build a pluggable core, then a benchmark CLI that drives all four backends through it.
 2. **Runtime:** Python library + CLI. A thin HTTP service can be added later as a language-agnostic adapter without changing the core.
 3. **Integration:** standalone for now. No v4vmusic codebase, DB, RSS ingestion, or listener-filter work in this project yet. Keep interfaces such that a catalog worker can be added later.
-4. **Labeled data:** not gathered yet; will live in `/home/hapa/k/code/ai-music-dector-root/test-audio/`. Supply of AI tracks may be limited (200 is difficult), so the set may be small. The label manifest will be CSV (format below).
+4. **Labeled data:** not gathered yet; will live in `/home/hapa/k/code/ai-music-dector-root/ai-music-detector/test-audio/`. Supply of AI tracks may be limited (200 is difficult), so the set may be small. The label manifest will be CSV (format below).
 5. **Generator identity is unknown** for the labeled tracks, so evaluation can only measure binary human-vs-AI performance. Honest cross-generator generalization testing is not possible with these labels; this limitation must be stated in any benchmark result.
 6. **SONICS: skip for now.** No download or training in this phase. It may be revisited later for training or cross-generator generalization testing (see the SONICS section below).
 7. **Sequence: bench first, library second.** Model testing happens in a separate `benches/` folder at the workspace root. Only after bench results are in do we create `ai-music-detector/` as a library, informed by what we learned. No detailed implementation plan has been agreed yet.

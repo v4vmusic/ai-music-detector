@@ -1,6 +1,6 @@
 # Coding Contract
 
-**Applies to:** every agent and human contributor in `/home/hapa/k/code/ai-music-dector-root`.
+**Applies to:** every agent and human contributor in `/home/hapa/k/code/ai-music-dector-root/ai-music-detector`.
 **Status:** binding. Read this file and the plan (`ai/plans/plan.md`) before writing any code.
 **Changes:** only with explicit approval from the project owner. Never silently reinterpret a rule.
 
@@ -11,7 +11,7 @@ This contract fixes conventions *now* so that work from different agents remains
 ## 1. Repository shape and sequencing
 
 ```
-/home/hapa/k/code/ai-music-dector-root/
+/home/hapa/k/code/ai-music-dector-root/ai-music-detector/
 ├── pyproject.toml              # single source of truth for deps + tool config
 ├── uv.lock                     # committed lockfile
 ├── benches/                    # model experiments and benchmark harness (first)

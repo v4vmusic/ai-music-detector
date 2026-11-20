@@ -2,7 +2,7 @@
 
 You are joining work on **AI Music Detector**, a standalone Python library that answers one question: given an audio file or URL, what is the calibrated probability that the track was AI-generated? Callers also get per-model detail and a conservative tri-state label (`human` / `uncertain` / `ai_generated`). The project is benchmark-first: model experiments live in `benches/`, and `ai-music-detector/` was created only after those results informed the design. Before doing anything else, familiarize yourself with the project as described below. Do not change any files while priming.
 
-The project is one git repo, `/home/hapa/k/code/ai-music-dector-root`. Paths below are relative to it; commands run from it. There is no second repo and no proof-of-concept to protect.
+The project is one git repo, `/home/hapa/k/code/ai-music-dector-root/ai-music-detector`. Paths below are relative to it; commands run from it. There is no second repo and no proof-of-concept to protect.
 
 ## 1. Read these documents, in this order
 
@@ -11,9 +11,9 @@ The project is one git repo, `/home/hapa/k/code/ai-music-dector-root`. Paths bel
 3. `ai/prompts/implementer.md`: the working prompt for phase work, including owner interaction and the final report.
 4. If the work touches tuning: `ai/plans/test-tuning-plan.md`. Tuning is a finished pre–Phase 6 track whose results feed the D1 decision.
 5. If the work touches a bench: `benches/README.md` and `benches/_shared/`. If it touches the library: `ai-music-detector/README.md` (API, install profiles, output responses).
-6. Then look at the code, `git log`, and the plan checkboxes. The documents describe the target; the code, checkboxes and history show how far along it is.
+6. The root `README.md` for orientation, then the code, `git log`, and the plan checkboxes. The documents describe the target; the code, checkboxes and history show how far along it is.
 
-`ai/reference/` (`discussion.md`, `test-tuning-discussion.md`) is a **historical log, not a source of truth** (CC §9): read it for background, never build from it. If it disagrees with the contract or plan, the contract and plan win. There is no glossary, vision document or root README — the files above are the whole rulebook.
+`ai/reference/` (`discussion.md`, `test-tuning-discussion.md`) is a **historical log, not a source of truth** (CC §9): read it for background, never build from it. If it disagrees with the contract or plan, the contract and plan win. There is no glossary, vision document or architecture document — the files above are the whole rulebook.
 
 ## 2. Things that are easy to get wrong
 
