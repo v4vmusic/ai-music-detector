@@ -136,6 +136,7 @@ def test_cli_root_help_lists_command_flags_and_examples(
     assert "--json" in out
     assert "--cascade" in out
     assert "https://example.com/track.mp3" in out
+    assert "--cascade requires the 'full' or 'gpu' install" in out
 
 
 def test_cli_root_help_explains_usage_ordering(capsys: pytest.CaptureFixture[str]) -> None:
@@ -170,3 +171,4 @@ def test_cli_score_help_lists_flags_and_examples(capsys: pytest.CaptureFixture[s
     assert "source" in out
     assert "https://example.com/track.mp3" in out
     assert "stderr" in out
+    assert "--cascade requires the 'full' or 'gpu' install" in out

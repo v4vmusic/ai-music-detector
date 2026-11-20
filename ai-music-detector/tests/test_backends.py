@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+import sys
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 from types import SimpleNamespace
@@ -182,6 +183,22 @@ def test_loaders_require_injected_models_without_weights() -> None:
         load_spctttra(MODEL_KEY_SPECTTRA_ALPHA)
     with pytest.raises(ModelLoadError, match="pipeline"):
         load_ast(MODEL_KEY_AST)
+
+
+def test_missing_gpu_dependencies_point_to_full_or_gpu_install(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setitem(sys.modules, "torch", None)
+    with pytest.raises(ModelLoadError, match=r"install the `full` or `gpu` extra"):
+        loaders.load_spctttra_classifier(SPECTTRA_SPECS[MODEL_KEY_SPECTTRA_ALPHA])
+
+
+def test_missing_ast_dependencies_point_to_ast_or_full_install(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setitem(sys.modules, "transformers", None)
+    with pytest.raises(ModelLoadError, match=r"install the `ast` or `full` extra"):
+        loaders.load_ast_pipeline(AST_SPEC)
 
 
 def test_backend_modules_do_not_import_model_libraries() -> None:

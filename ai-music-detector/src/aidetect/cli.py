@@ -42,6 +42,8 @@ _OUTPUT_CONTRACT = (
     "Errors exit 1 (argument errors exit 2)."
 )
 
+_CASCADE_REQUIREMENT = "--cascade requires the 'full' or 'gpu' install (SpecTTTra stage 2)."
+
 
 def _is_url(source: str) -> bool:
     return urlparse(source).scheme.lower() in _URL_SCHEMES
@@ -63,6 +65,7 @@ def _build_parser() -> argparse.ArgumentParser:
             f"{_USAGE_ORDER}\n\n"
             f"{_SCORING_FLAGS}\n\n"
             f"{_EXAMPLES}\n\n"
+            f"{_CASCADE_REQUIREMENT}\n"
             f"{_OUTPUT_CONTRACT}\n"
             "Run 'aidetect score --help' for the scoring help screen."
         ),
@@ -73,7 +76,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "score",
         help="score one local audio file or http(s) URL",
         description="Score one local audio file or http(s) URL.",
-        epilog=f"{_EXAMPLES}\n\n{_OUTPUT_CONTRACT}",
+        epilog=f"{_EXAMPLES}\n\n{_CASCADE_REQUIREMENT}\n{_OUTPUT_CONTRACT}",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     score.add_argument("source", help="local audio path or http(s) URL")

@@ -7,6 +7,21 @@ helpers and backends rather than reimplementing them.
 
 ## Install and import
 
+Two supported installation profiles:
+
+```bash
+uv pip install -e '.[cpu-only]'   # CPU only: fakeprint via ONNX
+uv pip install -e '.[full]'       # every backend (needed for --cascade)
+```
+
+`cpu-only` installs just `numpy` and `onnxruntime`; the ~15 kB fakeprint weights are fetched
+directly from Hugging Face with the standard library. It is the right choice for a CPU-only
+host or container — no torch, CUDA wheels, SONICS or transformers are downloaded. `--cascade`
+requires `full` (or `gpu`) because stage two uses SpecTTTra; on a cpu-only install it fails
+with a clear error instead of importing the GPU stack.
+
+The granular extras remain available if you want a subset:
+
 ```bash
 uv pip install -e .            # library only (numpy)
 uv pip install -e '.[onnx]'    # default fakeprint backend
@@ -17,28 +32,276 @@ uv pip install -e '.[ast]'     # AST backend
 Plain `import aidetect` does not import `torch`, `onnxruntime`, `transformers`, `sonics` or
 `huggingface_hub`. Model libraries and weights are loaded only when a detector actually needs
 them. Weights are cached under `AIDETECT_CACHE_DIR` when set, otherwise under the default
-Hugging Face cache.
+Hugging Face cache. Scoring needs `ffmpeg` on `PATH` (also inside the container if you deploy
+there); it performs the real audio decode for files, bytes and URLs.
 
-## Quick start
+## Python API
+
+### Detectors
+
+```python
+Detector.from_pretrained(
+    model_id=None, *,
+    config_name=None,
+    backend=None,
+    calibration=None,
+    cache_dir=None,
+    device="cpu",
+) -> Detector
+```
+
+Builds a detector from packaged config and calibration, loading weights lazily. With no
+arguments it uses the D1 default `FP-1b` (fakeprint, 10 s middle window, CPU/ONNX). Select
+another packaged operating point with `config_name` (`STA-1b`, `AST-1c`, `STB-1b`, `STG-1a`)
+or `model_id`; giving both checks that the id belongs to that config. SpecTTTra configs need
+the `gpu` extra and `AST-1c` needs the `ast` extra. `cache_dir` overrides `AIDETECT_CACHE_DIR`,
+and `device` defaults to `"cpu"`. `backend` and `calibration` are advanced injection points
+used by offline tests.
+
+| Method | Returns | Description |
+| --- | --- | --- |
+| `score_file(path)` | `Result` | Decode one configured window from a local file. |
+| `score_bytes(data)` | `Result` | Decode the same window from in-memory audio bytes. |
+| `score_url(url, *, fetcher=None)` | `Result` | Fetch remote audio safely, then score it (see [URL safety](#url-safety)). |
+
+`Detector.flag_threshold` exposes the packaged raw-score cutoff used for auto-AI decisions.
+
+```python
+CascadeDetector.from_pretrained(
+    *,
+    primary=None,
+    second_opinion=None,
+    primary_config_name="FP-1b",
+    second_opinion_config_name="STA-1b",
+    cache_dir=None,
+    device="cpu",
+) -> CascadeDetector
+```
+
+Builds the D1 two-stage detector described below. It has the same `score_file`, `score_bytes`
+and `score_url` methods, returning `CascadeResult`. `score_url` fetches the bytes once and
+scores both stages from that same payload.
+
+### Examples
+
+**Score a file, bytes or a URL** — all three adapters return the same `Result` shape:
+
+```python
+from pathlib import Path
+from aidetect import Detector
+
+detector = Detector.from_pretrained()
+results = [
+    detector.score_file("track.mp3"),
+    detector.score_bytes(Path("track.mp3").read_bytes()),
+    detector.score_url("https://example.com/track.mp3"),
+]
+for result in results:
+    print(result.label, f"{result.probability:.4f}", result.model_id)
+```
+
+**Use the conservative cascade** (stage 2 runs only when stage 1 did not flag):
+
+```python
+from aidetect import CascadeDetector
+
+cascade = CascadeDetector.from_pretrained()
+result = cascade.score_file("track.mp3")
+
+print(result.label)  # human | uncertain | ai_generated
+print(result.primary.label)
+if result.second_opinion is not None:  # None when stage 1 auto-labelled ai_generated
+    print(result.second_opinion.label)
+```
+
+**Select another packaged model**:
 
 ```python
 from aidetect import Detector
 
-detector = Detector.from_pretrained()  # D1 default: fakeprint FP-1b
+detector = Detector.from_pretrained(config_name="STA-1b")
+# equivalently: Detector.from_pretrained(model_id="awsaf49/sonics-spectttra-alpha-120s")
 result = detector.score_file("track.mp3")
-print(result.label, result.probability, result.window, result.placement)
+print(result.model_id, result.window)
 ```
 
-All three input adapters return the same `Result` shape:
+**Handle failures**:
 
 ```python
-result = detector.score_bytes(audio_bytes)  # in-memory audio
-result = detector.score_url("https://example.com/track.mp3")  # safe remote fetch
+from aidetect import (
+    AidetectError,
+    AudioDecodeError,
+    Detector,
+    ModelLoadError,
+    NetworkAudioError,
+)
+
+try:
+    result = Detector.from_pretrained().score_url("http://127.0.0.1/track.mp3")
+except NetworkAudioError as exc:
+    print(f"unsafe or unusable URL: {exc}")
+except (AudioDecodeError, ModelLoadError) as exc:
+    print(f"audio/model failure: {exc}")
+except (AidetectError, ValueError, OSError) as exc:
+    print(f"expected failure: {exc}")
 ```
 
-The result includes `raw_score`, calibrated `probability`, the tri-state `label`
-(`human`, `uncertain`, `ai_generated`), pinned model id/revision, window description, placement,
-warnings and timings.
+**Serialize for an app or service** — this is the payload the CLI writes with `--json`:
+
+```python
+import json
+from dataclasses import asdict
+from aidetect import Detector
+
+detector = Detector.from_pretrained()  # keep one instance; weights load once
+payload = asdict(detector.score_bytes(audio_bytes))  # audio_bytes: bytes from upload/cache
+print(json.dumps(payload, sort_keys=True))
+```
+
+**Reuse a detector for a batch** instead of constructing one per track:
+
+```python
+from aidetect import UNCERTAIN_LABEL, Detector
+
+detector = Detector.from_pretrained()
+review = [path for path in paths if detector.score_file(path).label == UNCERTAIN_LABEL]
+```
+
+### Output responses
+
+All three adapters return a frozen `Result`; the cascade returns a frozen `CascadeResult`.
+The CLI's `--json` output is `dataclasses.asdict()` of that same object, so JSON keys match the
+field names below. The example values below were generated from a synthetic tone and injected
+scorers: they show the exact shape, not expected scores for real music.
+
+**`Result` fields**
+
+| Field | Meaning |
+| --- | --- |
+| `label` | Tri-state outcome: `human`, `uncertain` or `ai_generated`. Always derived from `probability` and the packaged thresholds, never stored as independent truth. |
+| `probability` | Calibrated score in `[0, 1]` after temperature scaling. Compare with the packaged low/high thresholds for this model. |
+| `raw_score` | Backend score before calibration. Its scale is model-specific (fakeprint returns a sigmoid value; SpecTTTra returns a logit), so do not compare it across models or treat it as a probability. |
+| `model_id` | Pinned model id that produced the score. |
+| `model_revision` | Pinned model revision/commit. |
+| `window` | Decoded window as `<seconds>s@<rate>Hz[@<offset>s]`, e.g. `10s@16000Hz` or `120s@16000Hz@0s`. |
+| `placement` | Window placement used: `fixed`, `start`, `middle` or `end`. |
+| `warnings` | Array of strings from decoding and calibration, e.g. `short_track_padded`, `loop_filled`, `peak_normalized_to_fit_range` or `calibration_fallback: ...`. The CLI also prints these to stderr. |
+| `timings` | Object with `score_seconds`, `load_seconds` and `gpu_seconds`; fields that do not apply are `null`. |
+
+**`CascadeResult` fields**
+
+| Field | Meaning |
+| --- | --- |
+| `label` | Conservative final label. Only stage 1 can produce `ai_generated`; a stage-2 flag yields `uncertain`. |
+| `primary` | The stage-1 `Result` (always present). |
+| `second_opinion` | The stage-2 `Result`, or `null` when stage 1 auto-labelled `ai_generated`. |
+| `warnings` | Warnings from both stages, de-duplicated and merged in order. |
+
+`human` means the score fell below the low threshold, not proof of human authorship;
+`ai_generated` means it exceeded the high threshold, not ground truth. With inclusive edges,
+`low <= probability <= high` yields `uncertain`. For the packaged FP-1b calibration the two
+thresholds coincide, so the single-model `uncertain` band is effectively a single value — the
+cascade below is the recommended conservative workflow.
+
+**Example: single-model `Result`** (`aidetect score track.mp3 --json`):
+
+```json
+{
+  "label": "ai_generated",
+  "model_id": "lofcz/ai-music-detector",
+  "model_revision": "d2180598fed79e3f917e8050a00439982466e5c6",
+  "placement": "middle",
+  "probability": 0.7357,
+  "raw_score": 0.9940,
+  "timings": {
+    "gpu_seconds": null,
+    "load_seconds": null,
+    "score_seconds": 0.0067
+  },
+  "warnings": [],
+  "window": "10s@16000Hz"
+}
+```
+
+**Example: cascade routed to `uncertain`** — stage 1 did not flag, stage 2 did:
+
+```json
+{
+  "label": "uncertain",
+  "primary": {
+    "label": "human",
+    "model_id": "lofcz/ai-music-detector",
+    "model_revision": "d2180598fed79e3f917e8050a00439982466e5c6",
+    "placement": "middle",
+    "probability": 0.0594,
+    "raw_score": 0.000001,
+    "timings": {
+      "gpu_seconds": null,
+      "load_seconds": null,
+      "score_seconds": 0.01
+    },
+    "warnings": [],
+    "window": "10s@16000Hz"
+  },
+  "second_opinion": {
+    "label": "ai_generated",
+    "model_id": "awsaf49/sonics-spectttra-alpha-120s",
+    "model_revision": "094b32a5545098a71c113f6ae9d5c55310564268",
+    "placement": "middle",
+    "probability": 0.6695,
+    "raw_score": 1.2,
+    "timings": {
+      "gpu_seconds": null,
+      "load_seconds": null,
+      "score_seconds": 0.01
+    },
+    "warnings": ["short_track_padded"],
+    "window": "120s@16000Hz@0s"
+  },
+  "warnings": ["short_track_padded"]
+}
+```
+
+**Example: cascade auto-labelled `ai_generated`** — stage 2 is skipped:
+
+```json
+{
+  "label": "ai_generated",
+  "primary": {
+    "label": "ai_generated",
+    "model_id": "lofcz/ai-music-detector",
+    "model_revision": "d2180598fed79e3f917e8050a00439982466e5c6",
+    "placement": "middle",
+    "probability": 0.7148,
+    "raw_score": 0.99,
+    "timings": {
+      "gpu_seconds": null,
+      "load_seconds": null,
+      "score_seconds": 0.01
+    },
+    "warnings": [],
+    "window": "10s@16000Hz"
+  },
+  "second_opinion": null,
+  "warnings": []
+}
+```
+
+Without `--json`, stdout is one line:
+
+```
+human	probability=0.0594
+```
+
+For a cascade this line shows the final cascade `label` with the **primary** stage's
+`probability`; use `--json` to get both stages.
+
+### Errors
+
+Expected failures derive from `AidetectError`: `AudioDecodeError` (undecodable or invalid
+audio), `ModelLoadError` (weights/config problems) and `NetworkAudioError` (unsafe,
+unreachable or non-audio URL sources). Invalid arguments raise `ValueError`; missing local
+files raise `OSError`.
 
 ## CLI
 
@@ -55,13 +318,15 @@ uv run aidetect score track.mp3 --cascade --json   # D1 two-stage conservative p
 
 - `--json` writes exactly one JSON object (the serialized `Result` or `CascadeResult`) and a
   trailing newline to stdout. Without it, stdout is one short `label<TAB>probability=...` line.
+  See [Output responses](#output-responses) for field meanings and example payloads.
 - Decode warnings (for example `short_track_padded`) are written to stderr as diagnostics and
   are also present in the result's `warnings` array.
 - Expected failures (`AidetectError`, invalid values, I/O errors) write `aidetect: <message>` to
   stderr and exit with status 1; stdout stays empty. Argument errors use argparse's status 2.
 - `--cascade` keeps D1 semantics: only stage one can auto-label `ai_generated`; a stage-two flag
   routes the track to `uncertain`. Its JSON has nested `primary` and (unless stage one flagged)
-  `second_opinion` results instead of a top-level `probability`.
+  `second_opinion` results instead of a top-level `probability`. It requires the `full` or `gpu`
+  install.
 
 ## Conservative two-stage policy
 

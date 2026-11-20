@@ -111,7 +111,7 @@ def load_spctttra_classifier(
         from sonics import HFAudioClassifier  # type: ignore[import-untyped]
     except ImportError as exc:
         raise ModelLoadError(
-            "SpecTTTra needs sonics, torch and huggingface_hub; install the `gpu` extra"
+            "SpecTTTra needs sonics, torch and huggingface_hub; install the `full` or `gpu` extra"
         ) from exc
 
     def download(filename: str) -> Path:
@@ -181,7 +181,7 @@ def load_ast_pipeline(
         )
         from transformers import pipeline as hf_pipeline
     except ImportError as exc:
-        raise ModelLoadError("AST needs transformers; install the `onnx` extra") from exc
+        raise ModelLoadError("AST needs transformers; install the `ast` or `full` extra") from exc
 
     download_kwargs: dict[str, str] = {"revision": spec.revision}
     target = cache_dir if cache_dir is not None else _default_cache_dir()

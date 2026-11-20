@@ -16,6 +16,10 @@ dependencies = [
 aidetect = "aidetect.cli:main"
 
 [project.optional-dependencies]
+# Supported install profiles: cpu-only for the fakeprint ONNX stack, full for every backend.
+cpu-only = ["ai-music-detector[onnx]"]
+full = ["ai-music-detector[onnx,gpu,ast]"]
+# Granular extras remain available for subsets; profiles above delegate to these.
 # onnxruntime: runs the default fakeprint ONNX model on CPU; optional so plain imports stay light.
 onnx = ["onnxruntime>=1.23,<1.24"]
 # torch/torchaudio/sonics/huggingface_hub: pinned GPU inference stack for SpecTTTra backends.
@@ -35,7 +39,7 @@ dev = [
   "ruff>=0.6,<1",
   "mypy>=1.11,<2",
   # The bench harness and offline library tests need every optional backend installed.
-  "ai-music-detector[onnx,gpu,ast]",
+  "ai-music-detector[full]",
 ]
 
 [tool.setuptools.packages.find]
