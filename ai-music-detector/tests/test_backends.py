@@ -185,6 +185,19 @@ def test_loaders_require_injected_models_without_weights() -> None:
         load_ast(MODEL_KEY_AST)
 
 
+def test_missing_onnxruntime_points_to_onnx_or_full_install(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setitem(sys.modules, "onnxruntime", None)
+
+    def loader(spec: object, *, cache_dir: Path | None, device: str) -> bytes:
+        del spec, cache_dir, device
+        return b""
+
+    with pytest.raises(ModelLoadError, match=r"install the `onnx` or `full` extra"):
+        load_fakeprint(weights_loader=loader)
+
+
 def test_missing_gpu_dependencies_point_to_full_or_gpu_install(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

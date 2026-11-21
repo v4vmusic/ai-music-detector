@@ -42,7 +42,10 @@ _OUTPUT_CONTRACT = (
     "Errors exit 1 (argument errors exit 2)."
 )
 
-_CASCADE_REQUIREMENT = "--cascade requires the 'full' or 'gpu' install (SpecTTTra stage 2)."
+_CASCADE_REQUIREMENT = (
+    "--cascade requires the 'full' install (or 'onnx' + 'gpu'): "
+    "stage 1 needs onnxruntime and stage 2 needs SpecTTTra."
+)
 
 
 def _is_url(source: str) -> bool:

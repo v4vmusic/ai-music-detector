@@ -22,6 +22,7 @@ from aidetect.config import (
     get_calibration,
     get_config_for_model,
 )
+from aidetect.constants import AI_GENERATED_LABEL, HUMAN_LABEL, UNCERTAIN_LABEL
 from aidetect.errors import ModelLoadError
 from aidetect.types import AudioWindow, CascadeResult, ModelOutput, Result
 from aidetect.url import AudioFetcher, fetch_audio_bytes
@@ -234,7 +235,7 @@ class CascadeDetector:
         primary_result = self.primary.score_file(path)
         if primary_result.raw_score >= self.primary.flag_threshold:
             return CascadeResult(
-                label="ai_generated",
+                label=AI_GENERATED_LABEL,
                 primary=primary_result,
                 second_opinion=None,
                 warnings=primary_result.warnings,
@@ -250,7 +251,7 @@ class CascadeDetector:
         primary_result = self.primary.score_bytes(data)
         if primary_result.raw_score >= self.primary.flag_threshold:
             return CascadeResult(
-                label="ai_generated",
+                label=AI_GENERATED_LABEL,
                 primary=primary_result,
                 second_opinion=None,
                 warnings=primary_result.warnings,
@@ -265,9 +266,14 @@ class CascadeDetector:
         return self.score_bytes(fetch(url))
 
     def _combine(self, primary_result: Result, second_result: Result) -> CascadeResult:
-        flagged = second_result.raw_score >= self.second_opinion.flag_threshold
+        # The packaged raw cutoffs decide the stage flags (Q2). Only stage one may
+        # auto-label AI. After stage two runs, only unanimous ``human`` labels with no
+        # stage-two raw flag yield ``human``; a raw flag, a label disagreement, or any
+        # non-human label needs human review.
+        second_flagged = second_result.raw_score >= self.second_opinion.flag_threshold
+        both_human = primary_result.label == HUMAN_LABEL and second_result.label == HUMAN_LABEL
         return CascadeResult(
-            label="uncertain" if flagged else "human",
+            label=HUMAN_LABEL if both_human and not second_flagged else UNCERTAIN_LABEL,
             primary=primary_result,
             second_opinion=second_result,
             warnings=_merge_warnings(primary_result.warnings, second_result.warnings),

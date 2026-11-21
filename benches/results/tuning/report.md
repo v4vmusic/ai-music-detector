@@ -1,7 +1,8 @@
 # AI Music Detector — Tuning Report (Pre–Phase 6, T3)
 
 **Date:** 2026-11-19  
-**Status:** consolidated analysis complete; **T-D1/D1 owner decision pending** (see questionnaire).  
+**Status:** consolidated analysis complete; **T-D1/D1 resolved 2026-11-19** — owner changed D1 to `fakeprint` primary (`FP-1b`) + `spectttra-alpha-120s` second opinion (`STA-1b`); recorded in `ai/plans/plan.md` §5.
+
 **Scope:** pre–Phase 6 benchmark tuning experiments (T0–T2) compared against the Phase 5 baseline, to support the owner’s D1 reaffirm/change decision before Phase 6. No Phase 5 committed baseline artifacts were modified.
 
 ## 1. Scope and recorded decisions
@@ -30,12 +31,12 @@ Short-segment fill affected **5/400** AST tracks (4 human, 1 AI, <60s) and **26/
 
 ## 4. Phase 5 baseline (reference)
 
-Source: `benches/results/summary.json`, `benches/results/report.md`, `benches/results/calibration.json` (committed, seed 42, fixed dev/test, B1 peak normalization). D1 was provisionally recorded as `ast-60s` on the basis of lowest FPR@~95% recall among available backends.
+Source: `benches/results/summary.json`, `benches/results/report.md`, `benches/results/calibration.json` (committed, seed 42, fixed dev/test, B1 peak normalization). D1 was provisionally recorded as `ast-60s` on the basis of lowest FPR@~95% recall among available backends; that provisional choice was superseded on 2026-11-19 by the owner decision recorded in `ai/plans/plan.md` §5.
 
 | Backend (baseline, fixed 25s, zero-pad) | Test ROC-AUC | Test PR-AUC | Test FPR@~95% recall | Test ECE | Total score time | Test human FP / AI FN at **dev-derived 85% recall point** (goal-aligned, this report) |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | `fakeprint` | 0.9231 | 0.9271 | **1.000** | 0.3240 | ~1.85s | **1 / 8** (of 40/40) |
-| `ast-60s` (provisional D1) | 0.8578 | 0.8810 | 0.450 | 0.1569 | ~272.4s | 13 / 8 |
+| `ast-60s` (provisional D1; superseded) | 0.8578 | 0.8810 | 0.450 | 0.1569 | ~272.4s | 13 / 8 |
 | `spectttra-alpha-120s` | 0.8531 | 0.8804 | 0.725 | 0.0703 | ~9.45s | 8 / 8 |
 | `spectttra-beta-120s` | 0.8106 | 0.8345 | 0.675 | 0.1505 | ~6.01s | 22 / 3 |
 | `spectttra-gamma-120s` | 0.6944 | 0.7322 | 0.900 | 0.0990 | ~5.12s | 25 / 7 |
@@ -74,7 +75,7 @@ Loop-fill applied only to short segments (simple repeat, no crossfade) on each T
 - **Best tuned in-scope result:** **`ast-60s` AST-1c / AST-2a (end, 60s)** — **8/40** human FP, 6/40 AI FN at the goal point, improved from baseline `ast-60s` 13/40 FP; however **test FPR@95% recall worsened** (0.55 vs 0.45) and ROC-AUC gain was modest (0.876 vs 0.858). Loop-fill added no held-out benefit.
 - **`spectttra-alpha-120s`:** baseline already competitive at the goal point (8/40 FP); selected STA-1b was **mixed** (9/40 FP but fewer AI FN, 4/40). STA-2a did not reduce held-out FPs. Overall discrimination similar to baseline/tuned AST but with different tradeoffs (lower FPR@95% recall performance than AST baseline in Phase 5 terms, better ECE in baseline).
 - **`spectttra-beta/gamma`:** remained clearly behind on the primary goal (20 and 22 human FPs at best tuned goal point) despite small tuning gains.
-- **Operating-point dependence:** several backends rank differently at ~85% recall vs ~95% recall. The provisional D1 (`ast-60s`) was justified in Phase 5 primarily by **FPR@~95% recall**; under the tuning plan’s stated goal (~80–90% recall), the evidence shifts and must be weighed accordingly.
+- **Operating-point dependence:** several backends rank differently at ~85% recall vs ~95% recall. The provisional D1 (`ast-60s`) was justified in Phase 5 primarily by **FPR@~95% recall**; under the tuning plan’s stated goal (~80–90% recall), the evidence shifted, and the owner subsequently selected `fakeprint` + a `spectttra-alpha` second opinion (plan §5).
 
 ## 8. Limitations and caveats
 
@@ -105,14 +106,14 @@ Loop-fill applied only to short segments (simple repeat, no crossfade) on each T
 | Phase 5 raw JSONL (git-ignored) | `benches/results/raw/<backend>.jsonl` |
 | Decisions/discussion | `ai/reference/test-tuning-discussion.md`, `ai/plans/test-tuning-plan.md` |
 
-## 11. D1 review questionnaire (owner decision required)
+## 11. D1 review questionnaire (resolved 2026-11-19; historical record)
 
-**T-D1:** reaffirm or change provisional **D1** (`ast-60s`) before Phase 6 based on the evidence above. No agent records the final gate decision without owner confirmation. If the owner decides, record a dated line in `ai/plans/plan.md` §5 (and update this report’s pending state). Until then, D1 remains **provisional/pending review**.
+**T-D1 (resolved 2026-11-19):** the owner changed **D1** from the provisional `ast-60s` to **`fakeprint` primary (`FP-1b`) + `spectttra-alpha-120s` second opinion (`STA-1b`)**, recorded in `ai/plans/plan.md` §5. The questionnaire below is retained as the historical decision record.
 
 ```markdown
 ### 1. Which default backend/config should be D1 before Phase 6, given the primary goal (minimize human false flags at acceptable AI recall ~80–90%)?
 *Goal-aligned held-out counts at each config’s dev-derived 85% recall point (40 human / 40 AI): fakeprint baseline 1 FP / 8 FN; ast-60s AST-1c end 8 / 6 (baseline ast 13 / 8, but worse FPR@95% recall 0.55 vs 0.45); spectttra-alpha STA-1b 9 / 4 (baseline 8 / 8). All results directional on a small, genre-skewed, unknown-generator set.*
-- [ ] **Change D1 to `fakeprint` (Phase 5 baseline, CPU, ~15 kB) for a ~80–90% recall operating point (Recommended for the stated tuning goal).** Best measured goal-point result (1 human FP) but poor at ~95% recall (FPR@95% 1.0) and weak calibration (ECE 0.324); not placement/fill-tuned; revalidate before production use.
+- [x] **Change D1 to `fakeprint` (Phase 5 baseline, CPU, ~15 kB) for a ~80–90% recall operating point (Recommended for the stated tuning goal).** Best measured goal-point result (1 human FP) but poor at ~95% recall (FPR@95% 1.0) and weak calibration (ECE 0.324); not placement/fill-tuned; revalidate before production use. **Selected 2026-11-19, with `spectttra-alpha-120s` STA-1b as the recommended second opinion.**
 - [ ] Change D1 to `ast-60s` tuned **AST-1c** (end placement, 60s, zero-pad; AST-2a equivalent at goal point). Improves ast goal-point FPs (13→8) vs baseline ast with solid ROC-AUC, but regresses FPR@95% recall (0.55 vs 0.45) and is slower (~272s/400).
 - [ ] Reaffirm provisional D1 as **`ast-60s` baseline** (fixed 25s, Phase 5 config), prioritizing ~95% recall behavior over the ~80–90% tuning goal.
 - [ ] Choose a different backend/config (specify): ___ (e.g. `spectttra-alpha-120s` baseline or STA-1b).

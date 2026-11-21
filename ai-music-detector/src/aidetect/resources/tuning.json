@@ -10,6 +10,8 @@
     "stage_two_can_label_ai_generated": false,
     "stage_two_flag_label": "uncertain",
     "stage_two_no_flag_label": "human",
+    "stage_disagreement_label": "uncertain",
+    "human_requires_both_stages_human": true,
     "union_auto_ai_generated": false
   },
   "configs": {
@@ -73,6 +75,7 @@
     "Thresholds are dev-derived at 0.85 AI recall on a small, genre-skewed 400-track set with unknown generators.",
     "They are conditional on the documented placement, window, fill mode and peak-normalized preprocessing.",
     "Fakeprint calibration is weak (ECE about 0.286); prefer shadow/review use and revalidate on representative data.",
-    "Stage-two flags route to uncertain rather than ai_generated; union auto-AI labeling was rejected by tuning evidence."
+    "Stage-two flags route to uncertain rather than ai_generated; union auto-AI labeling was rejected by tuning evidence.",
+    "A disagreement between the two stages' calibrated labels also routes to uncertain; human requires both stages to agree on human and stage two not to flag."
   ]
 }

@@ -14,7 +14,7 @@ This plan is a pre–Phase 6 tuning track. It implements the experiments and evi
 - **Recall tradeoff:** accept **moderate AI-recall reduction (e.g. ~80–90%)** if it meaningfully reduces human false flags.
 - **Constraint:** results are **directional/conditional** (small, genre-skewed, unknown-generator manifest `test-audio/test-songs.csv`, 400 tracks: 200 human / 200 AI, seed 42).
 
-**Current state / baseline:** Phase 5 complete and committed (`0feae6a`). Gate **D1 is provisionally recorded as `ast-60s`** in `ai/plans/plan.md` §5. Phase 5 artifacts remain the committed baseline: `benches/results/calibration.json`, `benches/results/summary.json`, `benches/results/report.md` (raw git-ignored in `benches/results/raw/`). Tuning experiments must **not** overwrite these baseline artifacts.
+**Current state / baseline:** Phase 5 complete and committed (`0feae6a`). Gate **D1 was provisionally recorded as `ast-60s`**; that provisional choice is **superseded** by the 2026-11-19 owner decision in `ai/plans/plan.md` §5 (`fakeprint` primary + `spectttra-alpha-120s` second opinion). Phase 5 artifacts remain the committed baseline: `benches/results/calibration.json`, `benches/results/summary.json`, `benches/results/report.md` (raw git-ignored in `benches/results/raw/`). Tuning experiments must **not** overwrite these baseline artifacts.
 
 **Recorded decisions (2026-11-19, see `ai/reference/test-tuning-discussion.md`):**
 - Extend pre–Phase 6 work with benchmark tuning experiments before Phase 6.
@@ -57,6 +57,7 @@ This plan is a pre–Phase 6 tuning track. It implements the experiments and evi
 ## 5. Decision gates
 
 - **T-D1 (after Phase T3):** owner reaffirms or changes provisional **D1** (`ast-60s`) before Phase 6 based on comparative tuning evidence aligned with the primary goal (minimize human false flags at acceptable AI-recall, ~80–90% tradeoff range). Record the decision as a dated line in `ai/plans/plan.md` §5 (and summarize in the tuning report). If evidence is inconclusive, record that D1 remains provisional with rationale.
+- **T-D1 (resolved 2026-11-19):** owner changed D1 to **`fakeprint` primary + `spectttra-alpha-120s` second opinion**; recorded in `ai/plans/plan.md` §5 and `benches/results/tuning/report.md`. The earlier `ast-60s` line is historical/provisional and superseded.
 
 No agent decides T-D1 alone.
 
@@ -220,7 +221,7 @@ No agent decides T-D1 alone.
 - [x] CC §2 checks pass if any code/tests changed; Phase 5 committed artifacts unchanged
 
 **For later phases:**
-- **For Phase 6 (and owner T-D1/D1):** D1 remains **provisional/pending owner review** in `ai/plans/plan.md` §5 (`ast-60s`). Do not start Phase 6 until the owner records D1; if changed, update `ai/plans/plan.md` §5 and `benches/results/tuning/report.md`/`summary.json` pending state to match the decision and evidence.
-- **For Phase 6:** primary-goal evidence (min human FP at ~80–90% AI recall, dev-derived 85% point, held-out 40/40) favors `fakeprint` baseline (1 FP / 8 FN) over tuned in-scope configs; best tuned is `ast-60s` AST-1c/AST-2a end (8/6, improved from baseline ast 13/8 but worse FPR@95% recall 0.55 vs 0.45). `spectttra-alpha` baseline/STA-1b 8–9 FP; beta/gamma behind. All directional (400 tracks, skewed/unknown generators, saturated dev calibration).
+- **For Phase 6 (and owner T-D1/D1):** **T-D1/D1 resolved 2026-11-19** as `fakeprint` primary (`FP-1b`) + `spectttra-alpha-120s` second opinion (`STA-1b`), recorded in `ai/plans/plan.md` §5 and reflected in `benches/results/tuning/report.md`/`summary.json`. The earlier provisional `ast-60s` state is historical and superseded.
+- **For Phase 6:** primary-goal evidence (min human FP at ~80–90% AI recall, dev-derived 85% point, held-out 40/40) favored `fakeprint` baseline (1 FP / 8 FN) over tuned in-scope configs; best tuned was `ast-60s` AST-1c/AST-2a end (8/6, improved from baseline ast 13/8 but worse FPR@95% recall 0.55 vs 0.45). `spectttra-alpha` baseline/STA-1b 8–9 FP; beta/gamma behind. The owner selected `fakeprint` as primary and `spectttra-alpha` as the conservative second opinion. All directional (400 tracks, skewed/unknown generators, saturated dev calibration).
 - **For future tuning (if reopened):** loop-fill gave no held-out FP reduction at the goal point despite small dev gains (26 short tracks, label-skewed); multi-window aggregation remains deferred. `fakeprint` was not placement/fill-tuned.
 - **Artifacts:** consolidated `benches/results/tuning/report.md`, `benches/results/tuning/summary.json`; T1/T2 `placement-sweep-summary.{json,md}`, `loop-fill-summary.{json,md}`; Phase 5 baseline unchanged. Raw JSONL git-ignored under `benches/results/raw/` and `benches/results/tuning/<CFG>/raw/`.

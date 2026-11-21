@@ -15,9 +15,10 @@
     "total_tracks": 400
   },
   "decision": {
-    "d1_current_plan_record": "ast-60s (provisional, recorded 2026-11-19 in ai/plans/plan.md §5)",
-    "recommendation": "If prioritizing the stated goal (~80-90% AI recall), evidence favors changing D1 to fakeprint (1/40 held-out human FP at goal point) with caveats (poor at ~95% recall, weak calibration, not tuned). If prioritizing ~95% recall, ast-60s remains stronger at that point but tuning goal is misaligned; tuned ast-60s AST-1c improves ast goal-point behavior (8/40 FP) vs baseline ast (13/40) while regressing FPR@95% recall. Owner decision required.",
-    "t_d1_status": "pending_owner_decision"
+    "d1_decision": "fakeprint primary (FP-1b) + spectttra-alpha-120s second opinion (STA-1b); recorded 2026-11-19 in ai/plans/plan.md §5",
+    "d1_previous_provisional": "ast-60s (provisional, recorded 2026-11-19; superseded by the owner decision)",
+    "recommendation": "If prioritizing the stated goal (~80-90% AI recall), evidence favors changing D1 to fakeprint (1/40 held-out human FP at goal point) with caveats (poor at ~95% recall, weak calibration, not tuned). If prioritizing ~95% recall, ast-60s remains stronger at that point but tuning goal is misaligned; tuned ast-60s AST-1c improves ast goal-point behavior (8/40 FP) vs baseline ast (13/40) while regressing FPR@95% recall. Owner selected fakeprint primary with spectttra-alpha second opinion.",
+    "t_d1_status": "owner_decided"
   },
   "evidence": {
     "loop_fill_summary_json": "benches/results/tuning/loop-fill-summary.json",

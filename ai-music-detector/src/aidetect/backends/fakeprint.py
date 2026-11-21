@@ -141,7 +141,12 @@ def load(
                 )
             model_bytes = weights_loader(FAKEPRINT_SPEC, cache_dir=cache_dir, device=device)
         # Import here so plain `import aidetect` never loads ONNX runtime (CC §7).
-        import onnxruntime as ort  # type: ignore[import-untyped]  # no published stubs/py.typed
+        try:
+            import onnxruntime as ort  # type: ignore[import-untyped]  # no published stubs/py.typed
+        except ImportError as exc:
+            raise ModelLoadError(
+                "Fakeprint needs onnxruntime; install the `onnx` or `full` extra"
+            ) from exc
 
         session = cast(
             OnnxSession,

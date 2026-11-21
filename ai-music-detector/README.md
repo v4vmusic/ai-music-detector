@@ -17,8 +17,9 @@ uv pip install -e '.[full]'       # every backend (needed for --cascade)
 `cpu-only` installs just `numpy` and `onnxruntime`; the ~15 kB fakeprint weights are fetched
 directly from Hugging Face with the standard library. It is the right choice for a CPU-only
 host or container — no torch, CUDA wheels, SONICS or transformers are downloaded. `--cascade`
-requires `full` (or `gpu`) because stage two uses SpecTTTra; on a cpu-only install it fails
-with a clear error instead of importing the GPU stack.
+requires `full` (or both the `onnx` and `gpu` extras): stage 1 uses ONNX fakeprint and stage 2
+uses SpecTTTra. On a cpu-only install it fails with a clear error instead of importing the GPU
+stack.
 
 The granular extras remain available if you want a subset:
 
@@ -64,7 +65,9 @@ used by offline tests.
 | `score_bytes(data)` | `Result` | Decode the same window from in-memory audio bytes. |
 | `score_url(url, *, fetcher=None)` | `Result` | Fetch remote audio safely, then score it (see [URL safety](#url-safety)). |
 
-`Detector.flag_threshold` exposes the packaged raw-score cutoff used for auto-AI decisions.
+`Detector.flag_threshold` exposes the packaged raw-score cutoff used by the cascade for its
+stage flags. A standalone `Detector` does not use that cutoff: its `Result.label` comes from the
+calibrated probability and the packaged low/high thresholds.
 
 ```python
 CascadeDetector.from_pretrained(
@@ -178,7 +181,7 @@ scorers: they show the exact shape, not expected scores for real music.
 
 | Field | Meaning |
 | --- | --- |
-| `label` | Tri-state outcome: `human`, `uncertain` or `ai_generated`. Always derived from `probability` and the packaged thresholds, never stored as independent truth. |
+| `label` | Tri-state outcome: `human`, `uncertain` or `ai_generated`. For a standalone detector it is derived from `probability` and the packaged low/high thresholds, never stored as independent truth. The cascade may override the final label; see `CascadeResult`. |
 | `probability` | Calibrated score in `[0, 1]` after temperature scaling. Compare with the packaged low/high thresholds for this model. |
 | `raw_score` | Backend score before calibration. Its scale is model-specific (fakeprint returns a sigmoid value; SpecTTTra returns a logit), so do not compare it across models or treat it as a probability. |
 | `model_id` | Pinned model id that produced the score. |
@@ -192,16 +195,22 @@ scorers: they show the exact shape, not expected scores for real music.
 
 | Field | Meaning |
 | --- | --- |
-| `label` | Conservative final label. Only stage 1 can produce `ai_generated`; a stage-2 flag yields `uncertain`. |
+| `label` | Conservative final label and authoritative cascade outcome. Only stage 1 can produce `ai_generated`; a stage-2 flag or any disagreement between the two stages' calibrated labels yields `uncertain`. `human` requires both stages to agree on `human` and stage 2 not to flag. |
 | `primary` | The stage-1 `Result` (always present). |
 | `second_opinion` | The stage-2 `Result`, or `null` when stage 1 auto-labelled `ai_generated`. |
 | `warnings` | Warnings from both stages, de-duplicated and merged in order. |
 
-`human` means the score fell below the low threshold, not proof of human authorship;
-`ai_generated` means it exceeded the high threshold, not ground truth. With inclusive edges,
-`low <= probability <= high` yields `uncertain`. For the packaged FP-1b calibration the two
-thresholds coincide, so the single-model `uncertain` band is effectively a single value — the
-cascade below is the recommended conservative workflow.
+For a standalone `Result`, `human` means the calibrated probability fell below the low
+threshold, not proof of human authorship; `ai_generated` means it exceeded the high threshold,
+not ground truth. With inclusive edges, `low <= probability <= high` yields `uncertain`. For the
+packaged FP-1b calibration the two thresholds coincide, so the single-model `uncertain` band is
+effectively a single value — the cascade below is the recommended conservative workflow.
+
+The cascade uses a different rule for its stage decisions: stage 1's auto-AI flag and stage 2's
+flag compare each model's **raw score** with its packaged `flag_threshold` in `tuning.json`.
+`primary.label` and `second_opinion.label` remain the single-model calibrated labels and are not
+rewritten. If those two labels disagree, `CascadeResult.label` is `uncertain`; use
+`CascadeResult.label`, not `primary.label`, when applying the cascade policy.
 
 **Example: single-model `Result`** (`aidetect score track.mp3 --json`):
 
@@ -324,9 +333,9 @@ uv run aidetect score track.mp3 --cascade --json   # D1 two-stage conservative p
 - Expected failures (`AidetectError`, invalid values, I/O errors) write `aidetect: <message>` to
   stderr and exit with status 1; stdout stays empty. Argument errors use argparse's status 2.
 - `--cascade` keeps D1 semantics: only stage one can auto-label `ai_generated`; a stage-two flag
-  routes the track to `uncertain`. Its JSON has nested `primary` and (unless stage one flagged)
-  `second_opinion` results instead of a top-level `probability`. It requires the `full` or `gpu`
-  install.
+  or a disagreement between the two stages' calibrated labels routes the track to `uncertain`.
+  Its JSON has nested `primary` and (unless stage one flagged) `second_opinion` results instead of
+  a top-level `probability`. It requires the `full` install (or both the `onnx` and `gpu` extras).
 
 ## Conservative two-stage policy
 
@@ -344,11 +353,13 @@ result = cascade.score_file("track.mp3")
 ```
 
 Stage 1 runs `fakeprint` FP-1b on a middle 10 s window. Only stage 1 can produce
-`ai_generated`, using its packaged raw-score cutoff. Stage 2 runs `spectttra-alpha-120s`
-STA-1b on a middle 120 s window for tracks stage 1 did not flag: a stage-2 flag routes to
-`uncertain` for review, and no flag routes to `human`. There is no union rule that auto-labels
-a track `ai_generated` because either model alone flagged it. `CascadeResult` records both
-stage results (except that a stage-1 auto-AI result has no second-opinion stage).
+`ai_generated`, using its packaged raw-score cutoff; `primary.label` remains the single-model
+calibrated label. Stage 2 runs `spectttra-alpha-120s` STA-1b on a middle 120 s window for tracks
+stage 1 did not flag: a stage-2 raw flag routes to `uncertain` for review, and `human` requires
+both stages' calibrated labels to be `human`. Any disagreement between the two stages' labels
+is `uncertain`, because it needs human review. There is no union rule that auto-labels a track
+`ai_generated` because either model alone flagged it. `CascadeResult` records both stage results
+(except that a stage-1 auto-AI result has no second-opinion stage).
 
 `cascade.score_url(url)` fetches the bytes once and runs both stages on that same audio.
 
@@ -358,9 +369,11 @@ stage results (except that a stage-1 auto-AI result has no second-opinion stage)
 - `STA-1b` — second opinion: `spectttra-alpha-120s`, 120 s middle window, zero-pad.
 - `AST-1c`, `STB-1b`, `STG-1a` — other dev-selected backends, selectable by model id.
 
-Temperature, low/high tri-state thresholds and raw flag cutoffs are packaged in
-`aidetect/resources/calibration.json` and `aidetect/resources/tuning.json`. If calibration is
-missing or degenerate, the library uses fixed `0.35 / 0.65` thresholds with a warning.
+Temperature and the F1-derived single-model low/high tri-state thresholds are packaged in
+`aidetect/resources/calibration.json`. The goal-aligned raw-score `flag_threshold`s used by the
+cascade are packaged separately in `aidetect/resources/tuning.json`; they are not re-fitted from
+the single-model calibration. If calibration is missing or degenerate, the library uses fixed
+`0.35 / 0.65` thresholds with a warning.
 
 ## URL safety
 

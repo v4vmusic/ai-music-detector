@@ -28,7 +28,7 @@ Requires Python 3.10, `uv` and `ffmpeg` on `PATH`. From the repo root:
 ```bash
 uv sync                                            # install the dev environment (all backends)
 uv run aidetect score track.mp3 --json
-uv run aidetect score track.mp3 --cascade --json   # two-stage policy; needs the full install
+uv run aidetect score track.mp3 --cascade --json   # two-stage policy; needs full (or onnx + gpu)
 uv run aidetect score --help
 ```
 
@@ -54,7 +54,7 @@ See [the library README](ai-music-detector/README.md) for `score_bytes`, `score_
 | Profile | Installs | Use |
 | --- | --- | --- |
 | `cpu-only` | numpy + onnxruntime (default fakeprint) | CPU-only host or container; no torch, CUDA, SONICS or transformers. |
-| `full` | every backend | Required for `--cascade`, whose second stage uses SpecTTTra. |
+| `full` | every backend | Required for `--cascade` (or install both `onnx` and `gpu`); stage 1 needs ONNX fakeprint and stage 2 needs SpecTTTra. |
 | `onnx`, `gpu`, `ast` | individual backend stacks | Granular subsets; the profiles above delegate to these. |
 
 ```bash
@@ -74,10 +74,13 @@ selects fakeprint `FP-1b` as the primary stage for all tracks and SpecTTTra `STA
 opinion for tracks the primary stage did not auto-label `ai_generated`. Only the primary stage can
 produce an `ai_generated` label: a second-stage flag routes the track to `uncertain` for review.
 
-The label is always derived from the calibrated probability and packaged thresholds, never stored
-as independent ground truth. Results are directional: the labelled set is small, genre-skewed and
-of unknown generator identity, so cross-generator generalization cannot be claimed. Revalidate
-thresholds on representative data before enforcing any label automatically.
+A single-model `Result` label is derived from the calibrated probability and the packaged
+`calibration.json` low/high thresholds. The cascade's stage flags use the packaged raw-score
+cutoffs in `tuning.json` instead; if the two stages' calibrated labels disagree, the cascade
+returns `uncertain` for human review. Labels are never stored as independent ground truth.
+Results are directional: the labelled set is small, genre-skewed and of unknown generator
+identity, so cross-generator generalization cannot be claimed. Revalidate thresholds on
+representative data before enforcing any label automatically.
 
 ## Data and artifacts
 
