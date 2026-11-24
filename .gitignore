@@ -19,7 +19,8 @@ benches/results/raw/
 benches/results/*.jsonl
 benches/results/tuning/**/raw/
 
-# Audio and model weights are never committed
+# Audio and non-bundled model weights are never committed. The pinned FP-1b ONNX asset is an
+# explicit exception so deployments are self-contained.
 *.wav
 *.mp3
 *.flac
@@ -27,6 +28,7 @@ benches/results/tuning/**/raw/
 *.opus
 *.m4a
 *.onnx
+!ai-music-detector/src/aidetect/resources/ai_music_detector.onnx
 *.pt
 *.pth
 *.safetensors

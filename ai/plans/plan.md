@@ -39,7 +39,7 @@ Benchmark all *available* models; "all four" is qualified by these constraints.
 
 - Python 3.10.12, `uv` 0.6.5, ffmpeg, PyTorch 2.6.0+cu124, CUDA 12.4, cuDNN 9.1, RTX 3070 Ti with ~7.8 GB free VRAM. `torch` ~1.5 GB + `nvidia` libs ~3.7 GB installed. Missing at start: `onnxruntime` (Phase 1) and `sonics` (Phase 2).
 - Local disk ~45 GB free (96% used); NFS model share ~234 GB free. Check before downloads; never delete files you did not create.
-- Weights download on first use into `AIDETECT_CACHE_DIR` (default Hugging Face cache). Never commit weights, audio or raw benchmark output.
+- Weights download on first use into `AIDETECT_CACHE_DIR` (default Hugging Face cache). Never commit weights, audio or raw benchmark output, except the single pinned, digest-verified FP-1b ONNX asset bundled as package data for self-contained CPU-only deployment.
 - Contract rules: TDD red → green → refactor, test first for every behaviour and bug fix; DRY by the **rule of three**; offline deterministic default tests with fakes; GPU/network tests marked and run explicitly; ffmpeg via argument lists with `shell=False`; URL inputs reject private addresses and cap redirects, timeouts and bytes; conventional commits; no push without permission.
 - Benchmark integrity: criteria fixed before a run; report negative results plainly; no tuning on the reported split; seeded runs; raw per-track JSONL with model revision, versions, config hash and timings.
 - Owner interaction: markdown checkbox questionnaires, never a question-asking tool; blank answer is not consent; "don't make changes yet" means discuss only.
@@ -134,7 +134,7 @@ Generate fixtures in test code with the standard `wave` module; commit no binary
 - [x] Wrong sample rate or stereo raises the shared error, not a raw numpy/ONNX exception.
 - [x] Runner writes one JSONL row per manifest entry and records a warning for a failed decode without stopping.
 
-**Implementation notes:** backend receives an `AudioWindow` and performs no file/URL I/O; keep band/FFT constants in one function. Owner decision (2026-11-18): the released ONNX graph already applies Sigmoid (`ai_probability`, verified against `weights.npz`), so the backend passes its output through unchanged; do not add a second sigmoid. `benches/run_bench.py` owns weight download, caching and session creation; backends receive bytes or an injected session.
+**Implementation notes:** backend receives an `AudioWindow` and performs no file/URL I/O; keep band/FFT constants in one function. Owner decision (2026-11-18): the released ONNX graph already applies Sigmoid (`ai_probability`, verified against `weights.npz`), so the backend passes its output through unchanged; do not add a second sigmoid. `benches/run_bench.py` owns weight download, caching and session creation; backends receive bytes or an injected session. The library loader later gained a bundled pinned FP-1b asset for offline use; the benchmark runner remains unchanged.
 
 **Artifacts:** `benches/backends/fakeprint.py`, `benches/run_bench.py`, tests, git-ignored `benches/results/raw/fakeprint.jsonl`.
 

@@ -1,0 +1,31 @@
+Bundled model asset: ai_music_detector.onnx
+Source: https://huggingface.co/lofcz/ai-music-detector
+Revision: d2180598fed79e3f917e8050a00439982466e5c6
+Upstream project: https://github.com/lofcz/ai-music-detector
+License: MIT
+
+The bundled ONNX file is the unmodified pinned FP-1b weight from the source above. It is
+included in this package so the served detector can be deployed without network access to
+Hugging Face. The upstream project publishes it under the MIT License:
+
+MIT License
+
+Copyright (c) 2026 Matěj Štágl
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

@@ -32,9 +32,10 @@ uv pip install -e '.[ast]'     # AST backend
 
 Plain `import aidetect` does not import `torch`, `onnxruntime`, `transformers`, `sonics` or
 `huggingface_hub`. Model libraries and weights are loaded only when a detector actually needs
-them. Weights are cached under `AIDETECT_CACHE_DIR` when set, otherwise under the default
-Hugging Face cache. Scoring needs `ffmpeg` on `PATH` (also inside the container if you deploy
-there); it performs the real audio decode for files, bytes and URLs.
+them. The pinned FP-1b ONNX weights are bundled as package data and load offline without a cache
+or network request. Other weights are cached under `AIDETECT_CACHE_DIR` when set, otherwise under
+the default Hugging Face cache. Scoring needs `ffmpeg` on `PATH` (also inside the container if you
+deploy there); it performs the real audio decode for files, bytes and URLs.
 
 ## Python API
 
@@ -396,17 +397,19 @@ is a library adapter, not bench behaviour.
 
 ## Cache configuration
 
-Model weights are cached on first use under `AIDETECT_CACHE_DIR` when set, otherwise under the
-default Hugging Face cache:
+Non-bundled model weights are cached on first use under `AIDETECT_CACHE_DIR` when set, otherwise
+under the default Hugging Face cache:
 
 ```bash
 export AIDETECT_CACHE_DIR=/path/to/writable/cache
 uv run aidetect score track.mp3 --json
 ```
 
-The override applies to every model loader. An explicit `cache_dir=` passed to
-`from_pretrained()` takes precedence over the environment variable. URL responses are not written
-to this cache.
+The fakeprint loader checks that cache first, then the pinned FP-1b asset bundled with the
+package, and only then downloads from Hugging Face. That makes CPU-only deployments self-contained
+without requiring a writable model cache for FP-1b. The override applies to every model loader. An
+explicit `cache_dir=` passed to `from_pretrained()` takes precedence over the environment
+variable. URL responses are not written to this cache.
 
 ## Limitations
 

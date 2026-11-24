@@ -14,7 +14,7 @@ from aidetect.backends.ast import Pipeline
 from aidetect.backends.spctttra import Classifier
 from aidetect.constants import SAMPLE_RATE
 from aidetect.errors import ModelLoadError
-from aidetect.registry import AstSpec, ModelSpec, SpecTTTraSpec
+from aidetect.registry import FAKEPRINT_SPEC, AstSpec, ModelSpec, SpecTTTraSpec
 
 __all__ = [
     "MAX_WEIGHTS_BYTES",
@@ -46,34 +46,56 @@ def cache_dir() -> Path:
 _default_cache_dir = cache_dir
 
 
-def load_fakeprint_weights(
-    spec: ModelSpec, *, cache_dir: Path | None = None, device: str = "cpu"
-) -> bytes:
-    """Fetch pinned ONNX weights into the shared cache and verify their digest."""
+def _bundled_weights_path(spec: ModelSpec) -> Path | None:
+    """Return the packaged asset for the pinned FP-1b weights, if this spec matches it."""
 
-    del device  # CPU-only ONNX backend; the parameter keeps all loaders interchangeable.
-    root = cache_dir if cache_dir is not None else _default_cache_dir()
-    repo_cache = f"models--{spec.model_id.replace('/', '--')}"
-    path = root / repo_cache / "snapshots" / spec.revision / spec.weights_file
-    if path.exists():
-        data = path.read_bytes()
-    else:
-        url = f"https://huggingface.co/{spec.model_id}/resolve/{spec.revision}/{spec.weights_file}"
-        with urlopen(url, timeout=30) as response:  # noqa: S310 - pinned HTTPS URL
-            data = response.read(MAX_WEIGHTS_BYTES + 1)
-        if len(data) > MAX_WEIGHTS_BYTES:
-            raise ModelLoadError(
-                f"Weights for {spec.model_id} exceed the {MAX_WEIGHTS_BYTES} byte cap"
-            )
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(data)
+    if (
+        spec.model_id != FAKEPRINT_SPEC.model_id
+        or spec.revision != FAKEPRINT_SPEC.revision
+        or spec.weights_file != FAKEPRINT_SPEC.weights_file
+        or spec.weights_sha256 != FAKEPRINT_SPEC.weights_sha256
+    ):
+        return None
+    package_root = Path(__file__).resolve().parent.parent
+    return package_root / "resources" / spec.weights_file
 
+
+def _verified_weights(data: bytes, spec: ModelSpec) -> bytes:
+    """Apply the shared size cap and digest check to weights from any source."""
+
+    if len(data) > MAX_WEIGHTS_BYTES:
+        raise ModelLoadError(f"Weights for {spec.model_id} exceed the {MAX_WEIGHTS_BYTES} byte cap")
     digest = hashlib.sha256(data).hexdigest()
     if digest != spec.weights_sha256:
         raise ModelLoadError(
             f"Weights digest mismatch for {spec.model_id}: expected {spec.weights_sha256}, "
             f"got {digest}"
         )
+    return data
+
+
+def load_fakeprint_weights(
+    spec: ModelSpec, *, cache_dir: Path | None = None, device: str = "cpu"
+) -> bytes:
+    """Load pinned ONNX weights from the cache, bundled asset, or pinned URL, in that order."""
+
+    del device  # CPU-only ONNX backend; the parameter keeps all loaders interchangeable.
+    root = cache_dir if cache_dir is not None else _default_cache_dir()
+    repo_cache = f"models--{spec.model_id.replace('/', '--')}"
+    path = root / repo_cache / "snapshots" / spec.revision / spec.weights_file
+    if path.exists():
+        return _verified_weights(path.read_bytes(), spec)
+
+    bundled = _bundled_weights_path(spec)
+    if bundled is not None and bundled.exists():
+        return _verified_weights(bundled.read_bytes(), spec)
+
+    url = f"https://huggingface.co/{spec.model_id}/resolve/{spec.revision}/{spec.weights_file}"
+    with urlopen(url, timeout=30) as response:  # noqa: S310 - pinned HTTPS URL
+        data = response.read(MAX_WEIGHTS_BYTES + 1)
+    data = _verified_weights(data, spec)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(data)
     return data
 
 

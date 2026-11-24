@@ -123,8 +123,8 @@ https://example.com/feed/ep12.mp3,ai_generated
 - Fail fast with actionable messages. No bare `except`, no silent fallback that changes a score.
 - Add a dependency only with a one-line justification in the commit message; prefer the standard library; heavy/optional dependencies go behind extras.
 - `uv.lock` is committed. No unpinned transitive surprises.
-- Never commit audio files, model weights, credentials, or raw benchmark output. Add these paths to `.gitignore`.
-- Model weights download on first use into a cache controlled by `AIDETECT_CACHE_DIR` (default: the Hugging Face cache). Not into the repo.
+- Never commit audio files, credentials, or raw benchmark output. Add these paths to `.gitignore`. Model weights are not committed except for the single pinned, digest-verified FP-1b ONNX asset bundled as package data for self-contained deployments.
+- Model weights download on first use into a cache controlled by `AIDETECT_CACHE_DIR` (default: the Hugging Face cache), except FP-1b: the fakeprint loader checks the cache first, then the bundled pinned asset, and only falls back to the network when neither is present.
 
 ## 8. Security
 

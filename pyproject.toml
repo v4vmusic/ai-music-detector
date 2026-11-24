@@ -47,7 +47,7 @@ where = ["ai-music-detector/src"]
 include = ["aidetect*"]
 
 [tool.setuptools.package-data]
-aidetect = ["resources/*.json"]
+aidetect = ["resources/*.json", "resources/*.onnx", "resources/*.txt"]
 
 [tool.ruff]
 line-length = 100

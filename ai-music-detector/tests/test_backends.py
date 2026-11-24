@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import hashlib
 import math
 import sys
 from collections.abc import Mapping, Sequence
+from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
 from typing import cast
@@ -126,6 +128,102 @@ def test_fakeprint_rejects_bad_session_and_probability() -> None:
         load_fakeprint(session=_FakeSession(input_name="audio"))
     with pytest.raises(ModelLoadError, match="probability"):
         load_fakeprint(session=_FakeSession(output=1.4)).score(_window(10.0))
+
+
+def _bundled_fakeprint_bytes() -> bytes:
+    package_root = Path(loaders.__file__).resolve().parent.parent
+    return (package_root / "resources" / FAKEPRINT_SPEC.weights_file).read_bytes()
+
+
+def _cache_weights_path(spec: object, root: Path) -> Path:
+    fakeprint = FAKEPRINT_SPEC
+    repo_cache = f"models--{fakeprint.model_id.replace('/', '--')}"
+    return root / repo_cache / "snapshots" / fakeprint.revision / fakeprint.weights_file
+
+
+def _no_network(*args: object, **kwargs: object) -> None:
+    del args, kwargs
+    raise AssertionError("FP-1b weights must load without a network request")
+
+
+class _FakeUrlopenResponse:
+    def __init__(self, data: bytes) -> None:
+        self._data = data
+
+    def __enter__(self) -> _FakeUrlopenResponse:
+        return self
+
+    def __exit__(self, *args: object) -> None:
+        del args
+
+    def read(self, limit: int) -> bytes:
+        return self._data[:limit]
+
+
+def test_bundled_fakeprint_weights_are_offline_and_pinned(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(loaders, "urlopen", _no_network)
+
+    data = loaders.load_fakeprint_weights(FAKEPRINT_SPEC, cache_dir=tmp_path)
+
+    assert data == _bundled_fakeprint_bytes()
+    assert hashlib.sha256(data).hexdigest() == FAKEPRINT_SPEC.weights_sha256
+
+
+def test_fakeprint_cache_takes_precedence_over_bundled_weights(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    cached = _bundled_fakeprint_bytes()
+    path = _cache_weights_path(FAKEPRINT_SPEC, tmp_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(cached)
+
+    poisoned = tmp_path / "poisoned-bundle.onnx"
+    poisoned.write_bytes(b"not the pinned weights")
+    monkeypatch.setattr(loaders, "_bundled_weights_path", lambda spec: poisoned)
+    monkeypatch.setattr(loaders, "urlopen", _no_network)
+
+    assert loaders.load_fakeprint_weights(FAKEPRINT_SPEC, cache_dir=tmp_path) == cached
+
+
+def test_bundled_fakeprint_weights_still_require_matching_digest(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    poisoned = tmp_path / "poisoned-bundle.onnx"
+    poisoned.write_bytes(b"not the pinned weights")
+    monkeypatch.setattr(loaders, "_bundled_weights_path", lambda spec: poisoned)
+    monkeypatch.setattr(loaders, "urlopen", _no_network)
+
+    with pytest.raises(ModelLoadError, match="digest mismatch"):
+        loaders.load_fakeprint_weights(FAKEPRINT_SPEC, cache_dir=tmp_path)
+
+
+def test_other_fakeprint_specs_keep_the_network_fallback(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    data = b"network weights"
+    spec = replace(
+        FAKEPRINT_SPEC,
+        model_id="other/model",
+        revision="other-revision",
+        weights_file="other.onnx",
+        weights_sha256=hashlib.sha256(data).hexdigest(),
+    )
+    calls: list[tuple[str, int]] = []
+
+    def fake_urlopen(url: str, *, timeout: int) -> _FakeUrlopenResponse:
+        calls.append((url, timeout))
+        return _FakeUrlopenResponse(data)
+
+    monkeypatch.setattr(loaders, "urlopen", fake_urlopen)
+
+    result = loaders.load_fakeprint_weights(spec, cache_dir=tmp_path)
+
+    assert result == data
+    assert calls == [("https://huggingface.co/other/model/resolve/other-revision/other.onnx", 30)]
+    path = tmp_path / "models--other--model" / "snapshots" / "other-revision" / "other.onnx"
+    assert path.read_bytes() == data
 
 
 def test_spctttra_logit_maps_to_probability_and_rejects_bad_windows() -> None:

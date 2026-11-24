@@ -62,9 +62,10 @@ uv pip install -e '.[cpu-only]'
 uv pip install -e '.[full]'
 ```
 
-`uv sync` for contributors installs `full` through the dev dependency group. Model weights are
-fetched on first use into `AIDETECT_CACHE_DIR` (default: the Hugging Face cache), never into the
-repo. Plain `import aidetect` does not import any model library.
+`uv sync` for contributors installs `full` through the dev dependency group. The pinned FP-1b
+ONNX weights are bundled as package data so fakeprint scoring works offline; other model weights
+are fetched on first use into `AIDETECT_CACHE_DIR` (default: the Hugging Face cache) and are never
+committed. Plain `import aidetect` does not import any model library.
 
 ## How the detection policy works
 
